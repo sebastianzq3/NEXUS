@@ -618,7 +618,7 @@ namespace NEXUS
         public Realidad()
         {
             Random rndRealidad = new Random();
-            this.Nombre = $"{nombresMundos[rndRealidad.Next(nombresMundos.Length)]} {adjetivos[rnd.Next(adjetivos.Length)]}";
+            this.Nombre = $"{nombresMundos[rndRealidad.Next(nombresMundos.Length)]} {adjetivos[rndRealidad.Next(adjetivos.Length)]}";
             this.Estabilidad = rndRealidad.Next(30, 70);
             this.Anomalia = (Anomalia)rndRealidad.Next(0, 4);
         }
