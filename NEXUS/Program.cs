@@ -4,7 +4,6 @@
     {
         static void Main(string[] args)
         {
-            //aaaaaaa
             Console.ForegroundColor = ConsoleColor.Cyan;
             // Variables de colores en codigos ANSI
             string blanco = "\u001b[97m";
@@ -55,13 +54,10 @@
             Console.Write($"{blanco}[SISTEMA NEXUS]{cian} Realidad asignada al cadete: {magenta}{realidadAsignada.Nombre}{cian}");
 
 
-            // (Tu código anterior termina en la asignación de la realidad)
+
             Console.WriteLine("\nPresiona cualquier tecla para entrar a la simulación...");
             Console.ReadKey();
 
-            // ==========================================
-            // EL BUCLE INFINITO (SESIÓN DE ENTRENAMIENTO)
-            // ==========================================
             bool conectado = true;
 
             while (conectado)
