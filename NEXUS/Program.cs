@@ -50,7 +50,7 @@ namespace NEXUS
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine($"Bienvenido, Explorador {verde}{cadete.Nombre} {cian}de {verde}{cadete.Edad} {cian}años.");
 
-            // Asignación realidad
+            // Asignación realidad  
             Realidad realidadAsignada = new Realidad();
             Console.WriteLine($"\n{blanco}[SISTEMA NEXUS]{cian} Sincronizando coordenadas cuánticas...");
             Console.Write($"{blanco}[SISTEMA NEXUS]{cian} Realidad asignada al cadete: {magenta}{realidadAsignada.Nombre}{cian}");
@@ -75,13 +75,22 @@ namespace NEXUS
                 Console.WriteLine($"ESTABILIDAD:{verde}{realidadAsignada.Estabilidad}%{cian}");
                 Console.WriteLine("========================================\n");
 
-                Console.WriteLine("1. Buscar objetos");
-                Console.WriteLine("2. Utilizar objeto");
-                Console.WriteLine("3. Consultar estado");
-                Console.WriteLine("4. Recuperar energía");
-                Console.WriteLine("5. Intentar desconexión");
-                Console.WriteLine("6. Inventario");
-                Console.WriteLine("7. Observar realidad");
+                Console.WriteLine("1. Observar realidad");
+                Console.WriteLine("2. Buscar objetos");
+                Console.WriteLine("3. Inventario");
+                Console.WriteLine("4. Utilizar objeto (Interactuar)");
+                Console.WriteLine("5. Recuperar energía");
+                Console.WriteLine("6. Consultar estado");
+                Console.WriteLine("7. Manual del simulador");
+                Console.WriteLine("8. Intentar desconexión");
+                // mostrar extracción solo cuando estabilidad es 100
+                if (realidadAsignada.Estabilidad >= 100)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("9. ¡INICIAR EXTRACCIÓN! (Realidad Estabilizada)");
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                }
+
                 Console.Write("\nSeleccione una operación: ");
 
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -98,7 +107,98 @@ namespace NEXUS
                 // TOMA DE DECISIONES DE NEXUS
                 switch (opcion)
                 {
-                    case 1: // Buscar objetos (Reduce energía, otorga experiencia y loot)
+                    case 1: // Observar realidad (Pistas narrativas)
+                        Console.Clear();
+                        Console.WriteLine("========================================");
+                        Console.WriteLine($"{blanco}[SENSORIAL]{cian} Sintonizando los ecos de {magenta}{realidadAsignada.Nombre}{cian}...");
+
+
+                        string[] pistasTiempo =
+                        {
+                            "Miras tu reloj y las manecillas giran frenéticamente en sentido contrario.",
+                            "Notas que la piel de tus manos envejece y rejuvenece en cuestión de segundos.",
+                            "Una gota de lluvia grisácea se detiene en el aire frente a tus ojos, completamente congelada.",
+                            "Escuchas tus propios pasos resonar un par de segundos ANTES de que tu bota toque el suelo.",
+                            "Una planta a tus pies brota, florece, se marchita y se convierte en polvo en un solo parpadeo.",
+                            "El sol parece cruzar el cielo a tirones, haciendo que las sombras de tu entorno bailen de forma errática.",
+                            "Tiras una pequeña piedra y, antes de tocar el suelo, vuelve volando hacia la palma de tu mano.",
+                            "Sientes un fuerte déjà vu; jurarías que ya caminaste por este mismo sendero hace exactamente un minuto.",
+                            "Tu respiración suena desfasada, como si estuvieras inhalando ayer y exhalando mañana.",
+                            "Ves el cadáver de un insecto en el suelo recomponerse y salir volando en reversa."
+                        };
+
+                        string[] pistasEspacio =
+                        {
+                            "Caminas diez metros en línea recta, pero al darte la vuelta, tu punto de origen está a kilómetros de distancia.",
+                            "Las paredes de la estructura cercana no se unen en ángulos rectos, formando esquinas imposibles que marean tu vista.",
+                            "Un pilar a lo lejos parece inmenso, pero al dar un paso hacia él, se encoge hasta caber en la palma de tu mano.",
+                            "Miras a través del reflejo de un charco y te ves a ti mismo de espaldas, mirándote a ti mismo.",
+                            "El horizonte parece curvarse hacia arriba, encerrándote en un valle que se siente como el interior de una esfera.",
+                            "Intentas alcanzar un escombro cercano, pero tu brazo parece estirarse sin llegar nunca a tocarlo.",
+                            "Dejas caer una moneda y, en lugar de chocar con el piso, cae infinitamente a través de un abismo que no estaba ahí.",
+                            "El camino frente a ti se bifurca en tres direcciones, pero las tres parecen llevar exactamente a la misma roca.",
+                            "La topografía del terreno cambia cada vez que parpadeas, alterando las distancias de forma indetectable.",
+                            "El cielo y el suelo parecen intercambiar lugares bruscamente durante una fracción de segundo."
+                        };
+
+                        string[] pistasMente =
+                        {
+                            "Un recuerdo de tu infancia aflora, pero te das cuenta con terror de que le pertenece a otra persona.",
+                            "Intentas recordar tu propio nombre por un segundo, pero tu cerebro se queda en un blanco absoluto.",
+                            "Las sombras en el borde de tu visión toman formas humanoides que te observan con clara decepción.",
+                            "Sientes la abrumadora certeza de que algo invisible está leyendo tus pensamientos en tiempo real.",
+                            "Las letras del menú de tu traje parpadean y se transforman en símbolos incomprensibles que, extrañamente, puedes leer.",
+                            "Sientes una profunda tristeza por la pérdida de un cadete compañero... un compañero que jamás existió.",
+                            "Una voz idéntica a la tuya te susurra al oído que la única salida razonable es rendirse al vacío.",
+                            "Cierras los ojos y, en lugar de oscuridad, ves un laberinto geométrico que pulsa al ritmo de tus latidos.",
+                            "Comienzas a dudar si alguna vez entraste a la simulación NEXUS o si llevas toda tu vida atrapado aquí.",
+                            "El miedo irracional de que tus propios brazos son sintéticos y no te pertenecen se apodera de tu razón."
+                        };
+
+                        string[] pistasSilencio =
+                        {
+                            "Pisas una rama seca. Se rompe en mil pedazos, pero el crujido es reemplazado por un vacío que lastima tus oídos.",
+                            "Gritas con todas tus fuerzas, pero de tu garganta no sale absolutamente ningún sonido.",
+                            "El aire es tan espeso y mudo que el latido de tu propio corazón se vuelve un tambor que te ensordece por completo.",
+                            "Ves una enorme estructura colapsar a la distancia, cayendo en la más profunda y absoluta falta de ruido.",
+                            "Chocas dos piezas de metal frente a tu rostro, pero el impacto no genera ni la más mínima vibración acústica.",
+                            "El zumbido constante del sistema de tu traje de explorador se apaga; el vacío auditivo es casi asfixiante.",
+                            "Sientes una presión enorme en los tímpanos, como si todo el sonido del mundo hubiera sido succionado hacia el cielo.",
+                            "Intentas aplaudir, pero el impacto de tus palmas es absorbido por el ambiente como si golpearas bajo el agua.",
+                            "La quietud es tan antinatural que sientes que hacer el más mínimo ruido podría quebrar la realidad como un cristal.",
+                            "Escuchas un pitido agudo y constante dentro de tu cabeza, tu cerebro intentando compensar la muerte del sonido exterior."
+                        };
+
+                        Random rndPista = new Random();
+                        string pistaDescubierta = "";
+
+                        // pista en base a tipo de anomalía
+                        switch (realidadAsignada.Anomalia)
+                        {
+                            case Anomalia.Tiempo:
+                                pistaDescubierta = pistasTiempo[rndPista.Next(pistasTiempo.Length)];
+                                break;
+                            case Anomalia.Espacio:
+                                pistaDescubierta = pistasEspacio[rndPista.Next(pistasEspacio.Length)];
+                                break;
+                            case Anomalia.Mente:
+                                pistaDescubierta = pistasMente[rndPista.Next(pistasMente.Length)];
+                                break;
+                            case Anomalia.Silencio:
+                                pistaDescubierta = pistasSilencio[rndPista.Next(pistasSilencio.Length)];
+                                break;
+                        }
+
+                        // Mostramos la pista al jugador de forma misteriosa
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"\n[OBSERVACIÓN]: \"{pistaDescubierta}\"");
+
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        Console.WriteLine("\nRevisa tu inventario. ¿Tienes algo que contrarreste esto?");
+                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        break;
+
+                    case 2: // Buscar objetos (Reduce energía, otorga experiencia y loot)
                         if (cadete.Energia >= 3)
                         {
                             cadete.Energia -= 3;
@@ -158,7 +258,85 @@ namespace NEXUS
                         }
                         break;
 
-                    case 2: // Utilizar objeto
+                    case 3: // Inventario
+                        Console.WriteLine($"{blanco}[INVENTARIO DEL EXPLORADOR]{cian}");
+
+                        // Inventario vacío?
+                        if (cadete.Inventario.Count == 0)
+                        {
+                            Console.ForegroundColor = ConsoleColor.DarkYellow;
+                            Console.WriteLine("Tu inventario está vacío. No tienes objetos para inspeccionar.");
+                            Console.ForegroundColor = ConsoleColor.Cyan;
+                        }
+                        else
+                        {
+                            // 1. Mostrar la lista de objetos enumerados
+                            Console.WriteLine($"Capacidad actual: {cadete.Inventario.Count}/{cadete.CapacidadInventario}\n");
+                            for (int i = 0; i < cadete.Inventario.Count; i++)
+                            {
+                                Console.WriteLine($"{i + 1}. {verde}{cadete.Inventario[i].Nombre}{cian}");
+                            }
+
+                            // 2. Pedir selección
+                            Console.Write("\nSelecciona el número del objeto para inspeccionarlo (o presiona '0' para cancelar): ");
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            string inputInventario = Console.ReadLine();
+                            Console.ForegroundColor = ConsoleColor.Cyan;
+
+                            // 3. Validar la entrada y mostrar los detalles
+                            if (int.TryParse(inputInventario, out int indiceObjeto))
+                            {
+                                if (indiceObjeto > 0 && indiceObjeto <= cadete.Inventario.Count)
+                                {
+                                    Objeto objetoSeleccionado = cadete.Inventario[indiceObjeto - 1]; // restamos 1 para q siga los índices del menú
+
+                                    Console.WriteLine($"\n{blanco}--- ANÁLISIS DE OBJETO ---{cian}");
+                                    Console.WriteLine($"Nombre:      {magenta}{objetoSeleccionado.Nombre}{cian}");
+                                    Console.WriteLine($"Usos rest.:  {verde}{objetoSeleccionado.Usos}{cian}");
+                                    Console.WriteLine($"Descripción: {blanco}{objetoSeleccionado.Descripcion}{cian}");
+                                    Console.WriteLine($"{blanco}--------------------------{cian}");
+
+                                    // Pregunta si desea descartarlo
+                                    Console.Write($"\n¿Deseas descartar {magenta}{objetoSeleccionado.Nombre}{cian} para liberar espacio? (S/N): ");
+
+                                    Console.ForegroundColor = ConsoleColor.Green;
+                                    string opcionDescartar = Console.ReadLine().Trim().ToUpper();
+                                    Console.ForegroundColor = ConsoleColor.Cyan;
+
+                                    if (opcionDescartar == "S")
+                                    {
+                                        cadete.DescartarObjeto(objetoSeleccionado);
+
+                                        Console.ForegroundColor = ConsoleColor.Red;
+                                        Console.WriteLine($"\n[SISTEMA] {objetoSeleccionado.Nombre} ha sido destruido en el vacío cuántico.");
+                                        Console.ForegroundColor = ConsoleColor.Cyan;
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"\n{blanco}[SISTEMA]{cian} El objeto permanece seguro en tu inventario.");
+                                    }
+                                }
+                                else if (indiceObjeto == 0)
+                                {
+                                    Console.WriteLine($"{blanco}[SISTEMA]{cian} Inspección cancelada.");
+                                }
+                                else
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Red;
+                                    Console.WriteLine("ERROR: Ranura de inventario no encontrada.");
+                                    Console.ForegroundColor = ConsoleColor.Cyan;
+                                }
+                            }
+                            else
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine("ERROR: Entrada no válida.");
+                                Console.ForegroundColor = ConsoleColor.Cyan;
+                            }
+                        }
+                        break;
+
+                    case 4: // Utilizar objeto
                         Console.WriteLine($"{blanco}[INTERACCIÓN]{cian} Preparando interfaz de manipulación cuántica...");
 
                         // inventario tiene objetos?
@@ -253,7 +431,20 @@ namespace NEXUS
                         }
                         break;
 
-                    case 3: // Consultar estado
+                    case 5: // Recuperar energía
+                        if (cadete.Energia < cadete.EnergiaMax)
+                        {
+                            cadete.Energia += 4;
+                            Console.WriteLine($"{blanco}[SOPORTE]{cian} Extrayendo energía del entorno...");
+                            Console.WriteLine($"{verde}+4 Energía recuperada.{cian}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"{blanco}[SOPORTE]{cian} Los niveles de energía ya están al máximo.");
+                        }
+                        break;
+
+                    case 6: // Consultar estado
                         Console.WriteLine($"{blanco}[ESTADO DEL SISTEMA]{cian}");
                         Console.WriteLine($"Nivel del Cadete: {verde}{cadete.Nivel}{cian}");
                         Console.WriteLine($"Experiencia actual: {verde}{cadete.Experiencia}/100{cian}");
@@ -267,193 +458,92 @@ namespace NEXUS
                         }
                         break;
 
-                    case 4: // Recuperar energía
-                        if (cadete.Energia < cadete.EnergiaMax)
-                        {
-                            cadete.Energia += 4;
-                            Console.WriteLine($"{blanco}[SOPORTE]{cian} Extrayendo energía del entorno...");
-                            Console.WriteLine($"{verde}+4 Energía recuperada.{cian}");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"{blanco}[SOPORTE]{cian} Los niveles de energía ya están al máximo.");
-                        }
+                    case 7: // Manual del Simulador
+                        Console.Clear();
+                        Console.WriteLine("=======================================================");
+                        Console.WriteLine($"{blanco}          [BASE DE DATOS: MANUAL DEL EXPLORADOR]       {cian}");
+                        Console.WriteLine("=======================================================");
+
+                        Console.WriteLine($"\n{magenta}1. OBJETIVO DE LA SIMULACIÓN:{cian}");
+                        Console.WriteLine("Tu misión es adentrarte en simulaciones cuánticas inestables,");
+                        Console.WriteLine("sobrevivir a sus peligros y mantener la ESTABILIDAD del mundo.");
+                        Console.WriteLine("Si la Estabilidad cae a 20% o menos, la ANOMALÍA IRIS tomará el control.");
+
+                        Console.WriteLine($"\n{verde}2. ENERGÍA Y RECURSOS:{cian}");
+                        Console.WriteLine($"* {blanco}Energía:{cian} Necesaria para realizar acciones. Si se agota, quedarás");
+                        Console.WriteLine("  indefenso. Usa la opción 'Recuperar energía' para recargarla.");
+                        Console.WriteLine($"* {blanco}Experiencia:{cian} Sube tu Nivel de Cadete al explorar realidades.");
+
+                        Console.WriteLine($"\n{magenta}3. LAS 4 ANOMALÍAS:{cian}");
+                        Console.WriteLine("Cada mundo está corrompido por una anomalía oculta:");
+                        Console.WriteLine($"{blanco}TIEMPO, ESPACIO, MENTE o SILENCIO.{cian}");
+                        Console.WriteLine("Usa la opción 'Observar realidad' para recibir pistas sensoriales");
+                        Console.WriteLine("del entorno y deducir a qué tipo de anomalía te estás enfrentando.");
+
+                        Console.WriteLine($"\n{verde}4. INVENTARIO Y LOOT:{cian}");
+                        Console.WriteLine($"* {blanco}Buscar objetos:{cian} Gasta energía, pero puedes encontrar Artefactos.");
+                        Console.WriteLine("* Tu mochila tiene capacidad limitada. Deberás descartar objetos");
+                        Console.WriteLine("  si quieres recoger equipo nuevo.");
+
+                        Console.WriteLine($"\n{magenta}5. INTERACTUAR CON LA REALIDAD (SUPERVIVENCIA):{cian}");
+                        Console.WriteLine("Una vez que deduzcas qué anomalía afecta al mundo, elige un objeto");
+                        Console.WriteLine("de tu inventario (leyendo su descripción) e interactúa con la realidad.");
+                        Console.WriteLine($"* {verde}Sinergia Correcta:{cian} La Estabilidad aumenta drásticamente.");
+                        Console.WriteLine($"* {ConsoleColor.Red}Elección Incorrecta:{cian} La realidad empeora y pierdes Estabilidad.");
+
+                        Console.WriteLine("\n=======================================================");
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("FIN DEL ARCHIVO. Presiona cualquier tecla para volver al menú...");
+                        Console.ForegroundColor = ConsoleColor.Cyan;
                         break;
 
-                    case 5: // Desconexión
+                    case 8: // Desconexión
                         Console.WriteLine($"{blanco}[SISTEMA NEXUS]{cian} Iniciando protocolo de desconexión...");
                         Console.WriteLine("Guardando estado del cadete...");
                         Console.WriteLine($"\n{verde}Desconexión exitosa. Fin de la simulación.{cian}");
                         conectado = false;
                         break;
 
-                    case 6: // Inventario
-                        Console.WriteLine($"{blanco}[INVENTARIO DEL EXPLORADOR]{cian}");
-
-                        // Inventario vacío?
-                        if (cadete.Inventario.Count == 0)
+                    case 9: // extracción (solo aparece cuando Estabilidad es 100%)
+                        if (realidadAsignada.Estabilidad >= 100)
                         {
-                            Console.ForegroundColor = ConsoleColor.DarkYellow;
-                            Console.WriteLine("Tu inventario está vacío. No tienes objetos para inspeccionar.");
+                            Console.Clear();
+                            Console.WriteLine("=======================================================");
+                            Console.BackgroundColor = ConsoleColor.DarkGreen;
+                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.WriteLine("           [PROTOCOLO DE EXTRACCIÓN INICIADO]          ");
+                            Console.ResetColor();
                             Console.ForegroundColor = ConsoleColor.Cyan;
+                            Console.WriteLine("=======================================================");
+
+                            Console.WriteLine($"\n{blanco}[NEXUS]{cian} Sellando fisuras cuánticas en {magenta}{realidadAsignada.Nombre}{cian}...");
+                            Console.WriteLine("La matriz espacial de este universo ha sido estabilizada por completo.");
+                            Console.WriteLine($"La anomalía de tipo {magenta}{realidadAsignada.Anomalia}{cian} ha sido purgada. Has salvado esta realidad del colapso.");
+
+                            // recompensa
+                            cadete.Experiencia += 100;
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"\n[RECOMPENSA DE EXTRACCIÓN]: {blanco}+100 EXP{verde} obtenida.");
+                            Console.WriteLine($"Nivel actual del Cadete: {blanco}{cadete.Nivel}{verde}.");
+                            Console.ForegroundColor = ConsoleColor.Cyan;
+
+                            // nueva realidad
+                            realidadAsignada = new Realidad();
+                            Console.WriteLine($"\n{blanco}[SISTEMA NEXUS]{cian} Desconectando anclajes temporales...");
+                            Console.WriteLine($"Buscando un nuevo mundo al borde del colapso...");
+                            Console.WriteLine($"\nSincronizando nuevas coordenadas cuánticas...");
+                            Console.WriteLine($"Nueva realidad asignada al cadete: {magenta}{realidadAsignada.Nombre}{cian}");
+                            Console.WriteLine($"Nivel de amenaza inicial (Estabilidad): {verde}{realidadAsignada.Estabilidad}%{cian}");
                         }
                         else
                         {
-                            // 1. Mostrar la lista de objetos enumerados
-                            Console.WriteLine($"Capacidad actual: {cadete.Inventario.Count}/{cadete.CapacidadInventario}\n");
-                            for (int i = 0; i < cadete.Inventario.Count; i++)
-                            {
-                                Console.WriteLine($"{i + 1}. {verde}{cadete.Inventario[i].Nombre}{cian}");
-                            }
-
-                            // 2. Pedir selección
-                            Console.Write("\nSelecciona el número del objeto para inspeccionarlo (o presiona '0' para cancelar): ");
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            string inputInventario = Console.ReadLine();
+                            // Protección por si el usuario presiona 9 cuando no debe
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("ERROR DE PROTOCOLO: Extracción denegada.");
+                            Console.WriteLine($"Para sellar un universo se requiere un 100% de Estabilidad. (Actual: {realidadAsignada.Estabilidad}%)");
+                            Console.WriteLine("Continúa purgando las anomalías del sector.");
                             Console.ForegroundColor = ConsoleColor.Cyan;
-
-                            // 3. Validar la entrada y mostrar los detalles
-                            if (int.TryParse(inputInventario, out int indiceObjeto))
-                            {
-                                if (indiceObjeto > 0 && indiceObjeto <= cadete.Inventario.Count)
-                                {
-                                    Objeto objetoSeleccionado = cadete.Inventario[indiceObjeto - 1]; // restamos 1 para q siga los índices del menú
-
-                                    Console.WriteLine($"\n{blanco}--- ANÁLISIS DE OBJETO ---{cian}");
-                                    Console.WriteLine($"Nombre:      {magenta}{objetoSeleccionado.Nombre}{cian}");
-                                    Console.WriteLine($"Usos rest.:  {verde}{objetoSeleccionado.Usos}{cian}");
-                                    Console.WriteLine($"Descripción: {blanco}{objetoSeleccionado.Descripcion}{cian}");
-                                    Console.WriteLine($"{blanco}--------------------------{cian}");
-
-                                    // Pregunta si desea descartarlo
-                                    Console.Write($"\n¿Deseas descartar {magenta}{objetoSeleccionado.Nombre}{cian} para liberar espacio? (S/N): ");
-
-                                    Console.ForegroundColor = ConsoleColor.Green;
-                                    string opcionDescartar = Console.ReadLine().Trim().ToUpper();
-                                    Console.ForegroundColor = ConsoleColor.Cyan;
-
-                                    if (opcionDescartar == "S")
-                                    {
-                                        cadete.DescartarObjeto(objetoSeleccionado);
-
-                                        Console.ForegroundColor = ConsoleColor.Red;
-                                        Console.WriteLine($"\n[SISTEMA] {objetoSeleccionado.Nombre} ha sido destruido en el vacío cuántico.");
-                                        Console.ForegroundColor = ConsoleColor.Cyan;
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine($"\n{blanco}[SISTEMA]{cian} El objeto permanece seguro en tu inventario.");
-                                    }
-                                }
-                                else if (indiceObjeto == 0)
-                                {
-                                    Console.WriteLine($"{blanco}[SISTEMA]{cian} Inspección cancelada.");
-                                }
-                                else
-                                {
-                                    Console.ForegroundColor = ConsoleColor.Red;
-                                    Console.WriteLine("ERROR: Ranura de inventario no encontrada.");
-                                    Console.ForegroundColor = ConsoleColor.Cyan;
-                                }
-                            }
-                            else
-                            {
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine("ERROR: Entrada no válida.");
-                                Console.ForegroundColor = ConsoleColor.Cyan;
-                            }
                         }
-                        break;
-
-                    case 7: // Observar realidad (Pistas narrativas)
-                        Console.Clear();
-                        Console.WriteLine("========================================");
-                        Console.WriteLine($"{blanco}[SENSORIAL]{cian} Sintonizando los ecos de {magenta}{realidadAsignada.Nombre}{cian}...");
-
-
-                        string[] pistasTiempo =
-                        {
-                            "Miras tu reloj y las manecillas giran frenéticamente en sentido contrario.",
-                            "Notas que la piel de tus manos envejece y rejuvenece en cuestión de segundos.",
-                            "Una gota de lluvia grisácea se detiene en el aire frente a tus ojos, completamente congelada.",
-                            "Escuchas tus propios pasos resonar un par de segundos ANTES de que tu bota toque el suelo.",
-                            "Una planta a tus pies brota, florece, se marchita y se convierte en polvo en un solo parpadeo.",
-                            "El sol parece cruzar el cielo a tirones, haciendo que las sombras de tu entorno bailen de forma errática.",
-                            "Tiras una pequeña piedra y, antes de tocar el suelo, vuelve volando hacia la palma de tu mano.",
-                            "Sientes un fuerte déjà vu; jurarías que ya caminaste por este mismo sendero hace exactamente un minuto.",
-                            "Tu respiración suena desfasada, como si estuvieras inhalando ayer y exhalando mañana.",
-                            "Ves el cadáver de un insecto en el suelo recomponerse y salir volando en reversa."
-                        };
-
-                        string[] pistasEspacio =
-                        {
-                            "Caminas diez metros en línea recta, pero al darte la vuelta, tu punto de origen está a kilómetros de distancia.",
-                            "Las paredes de la estructura cercana no se unen en ángulos rectos, formando esquinas imposibles que marean tu vista.",
-                            "Un pilar a lo lejos parece inmenso, pero al dar un paso hacia él, se encoge hasta caber en la palma de tu mano.",
-                            "Miras a través del reflejo de un charco y te ves a ti mismo de espaldas, mirándote a ti mismo.",
-                            "El horizonte parece curvarse hacia arriba, encerrándote en un valle que se siente como el interior de una esfera.",
-                            "Intentas alcanzar un escombro cercano, pero tu brazo parece estirarse sin llegar nunca a tocarlo.",
-                            "Dejas caer una moneda y, en lugar de chocar con el piso, cae infinitamente a través de un abismo que no estaba ahí.",
-                            "El camino frente a ti se bifurca en tres direcciones, pero las tres parecen llevar exactamente a la misma roca.",
-                            "La topografía del terreno cambia cada vez que parpadeas, alterando las distancias de forma indetectable.",
-                            "El cielo y el suelo parecen intercambiar lugares bruscamente durante una fracción de segundo."
-                        };
-
-                        string[] pistasMente =
-                        {
-                            "Un recuerdo de tu infancia aflora, pero te das cuenta con terror de que le pertenece a otra persona.",
-                            "Intentas recordar tu propio nombre por un segundo, pero tu cerebro se queda en un blanco absoluto.",
-                            "Las sombras en el borde de tu visión toman formas humanoides que te observan con clara decepción.",
-                            "Sientes la abrumadora certeza de que algo invisible está leyendo tus pensamientos en tiempo real.",
-                            "Las letras del menú de tu traje parpadean y se transforman en símbolos incomprensibles que, extrañamente, puedes leer.",
-                            "Sientes una profunda tristeza por la pérdida de un cadete compañero... un compañero que jamás existió.",
-                            "Una voz idéntica a la tuya te susurra al oído que la única salida razonable es rendirse al vacío.",
-                            "Cierras los ojos y, en lugar de oscuridad, ves un laberinto geométrico que pulsa al ritmo de tus latidos.",
-                            "Comienzas a dudar si alguna vez entraste a la simulación NEXUS o si llevas toda tu vida atrapado aquí.",
-                            "El miedo irracional de que tus propios brazos son sintéticos y no te pertenecen se apodera de tu razón."
-                        };
-
-                        string[] pistasSilencio =
-                        {
-                            "Pisas una rama seca. Se rompe en mil pedazos, pero el crujido es reemplazado por un vacío que lastima tus oídos.",
-                            "Gritas con todas tus fuerzas, pero de tu garganta no sale absolutamente ningún sonido.",
-                            "El aire es tan espeso y mudo que el latido de tu propio corazón se vuelve un tambor que te ensordece por completo.",
-                            "Ves una enorme estructura colapsar a la distancia, cayendo en la más profunda y absoluta falta de ruido.",
-                            "Chocas dos piezas de metal frente a tu rostro, pero el impacto no genera ni la más mínima vibración acústica.",
-                            "El zumbido constante del sistema de tu traje de explorador se apaga; el vacío auditivo es casi asfixiante.",
-                            "Sientes una presión enorme en los tímpanos, como si todo el sonido del mundo hubiera sido succionado hacia el cielo.",
-                            "Intentas aplaudir, pero el impacto de tus palmas es absorbido por el ambiente como si golpearas bajo el agua.",
-                            "La quietud es tan antinatural que sientes que hacer el más mínimo ruido podría quebrar la realidad como un cristal.",
-                            "Escuchas un pitido agudo y constante dentro de tu cabeza, tu cerebro intentando compensar la muerte del sonido exterior."
-                        };
-
-                        Random rndPista = new Random();
-                        string pistaDescubierta = "";
-
-                        // pista en base a tipo de anomalía
-                        switch (realidadAsignada.Anomalia)
-                        {
-                            case Anomalia.Tiempo:
-                                pistaDescubierta = pistasTiempo[rndPista.Next(pistasTiempo.Length)];
-                                break;
-                            case Anomalia.Espacio:
-                                pistaDescubierta = pistasEspacio[rndPista.Next(pistasEspacio.Length)];
-                                break;
-                            case Anomalia.Mente:
-                                pistaDescubierta = pistasMente[rndPista.Next(pistasMente.Length)];
-                                break;
-                            case Anomalia.Silencio:
-                                pistaDescubierta = pistasSilencio[rndPista.Next(pistasSilencio.Length)];
-                                break;
-                        }
-
-                        // Mostramos la pista al jugador de forma misteriosa
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"\n[OBSERVACIÓN]: \"{pistaDescubierta}\"");
-
-                        Console.ForegroundColor = ConsoleColor.DarkGray;
-                        Console.WriteLine("\nRevisa tu inventario. ¿Tienes algo que contrarreste esto?");
-                        Console.ForegroundColor = ConsoleColor.Cyan;
                         break;
 
                     default: // Manejo de errores de entrada (Protocolo de seguridad)
