@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
 
 namespace NEXUS
 {
@@ -75,19 +76,20 @@ namespace NEXUS
                 Console.WriteLine($"ESTABILIDAD:{verde}{realidadAsignada.Estabilidad}%{cian}");
                 Console.WriteLine("========================================\n");
 
-                Console.WriteLine("1. Observar realidad");
-                Console.WriteLine("2. Buscar objetos");
-                Console.WriteLine("3. Inventario");
-                Console.WriteLine("4. Utilizar objeto (Interactuar)");
-                Console.WriteLine("5. Recuperar energía");
-                Console.WriteLine("6. Consultar estado");
-                Console.WriteLine("7. Manual del simulador");
-                Console.WriteLine("8. Intentar desconexión");
-                // mostrar extracción solo cuando estabilidad es 100
+                Console.WriteLine($"1. Observar realidad");
+                Console.WriteLine($"2. Buscar objetos         {verde}[-3 Energía]{cian}");
+                Console.WriteLine($"3. Inventario");
+                Console.WriteLine($"4. Utilizar objeto        {verde}[-2 Energía]{cian}");
+                Console.WriteLine($"5. Recuperar energía      {verde}[+5 Recarga]{cian}");
+                Console.WriteLine($"6. Consultar estado");
+                Console.WriteLine($"7. Manual del simulador");
+                Console.WriteLine($"8. Intentar desconexión");
+
+                // Mostrar la opción de Extracción de forma dinámica
                 if (realidadAsignada.Estabilidad >= 100)
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("9. ¡INICIAR EXTRACCIÓN! (Realidad Estabilizada)");
+                    Console.WriteLine("9. ¡INICIAR EXTRACCIÓN!   [NIVEL ESTABLE]");
                     Console.ForegroundColor = ConsoleColor.Cyan;
                 }
 
@@ -228,7 +230,27 @@ namespace NEXUS
 
                             // imprimir ambientación y crear el objeto encontrado
                             Console.WriteLine($"\n{ambientacion}");
-                            Objeto lootEncontrado = new Objeto();
+
+                            Objeto lootEncontrado;
+                            bool yaLoTiene;
+
+                            // bucle hasta encontrar un objeto q no esté en el inventario
+                            do
+                            {
+                                lootEncontrado = new Objeto();
+                                yaLoTiene = false;
+
+                                foreach (Objeto item in cadete.Inventario)
+                                {
+                                    if (item.Nombre == lootEncontrado.Nombre)
+                                    {
+                                        yaLoTiene = true;
+                                        break;
+                                    }
+                                }
+
+                            } while (yaLoTiene); // Si la alarma está encendida, se repite todo.
+
                             Console.WriteLine($"¡Has encontrado un(a) {magenta}{lootEncontrado.Nombre}{cian}!");
 
                             // INTENTAR guardar el objeto
@@ -432,16 +454,184 @@ namespace NEXUS
                         break;
 
                     case 5: // Recuperar energía
-                        if (cadete.Energia < cadete.EnergiaMax)
+                        if (cadete.Energia >= cadete.EnergiaMax)
                         {
-                            cadete.Energia += 4;
-                            Console.WriteLine($"{blanco}[SOPORTE]{cian} Extrayendo energía del entorno...");
-                            Console.WriteLine($"{verde}+4 Energía recuperada.{cian}");
+                            Console.WriteLine($"{blanco}[SOPORTE]{cian} Los niveles de energía ya están al máximo.");
+                            break;
+                        }
+
+                        Console.Clear();
+                        Console.WriteLine("========================================");
+                        Console.WriteLine($"{blanco}[SOPORTE VITAL]{cian} Iniciando protocolo de recarga...");
+                        Console.WriteLine("Para extraer energía de la red, debes superar un filtro de seguridad de NEXUS.");
+                        Console.WriteLine("========================================\n");
+
+                        Random rndMinijuego = new Random();
+                        int tipoJuego = rndMinijuego.Next(1, 5);
+                        bool minijuegoGanado = false;
+
+                        switch (tipoJuego)
+                        {
+                            case 1: // MINIJUEGO 1: Acertijos de Lore
+                                string[] preguntasLore =
+                                {
+                                    "Soy la inteligencia artificial que desertó y el virus que consume estas simulaciones. ¿Cuál es mi nombre?",
+                                    "Mi flujo retrocede, marchito lo que nace y convierto los recuerdos en futuro. ¿Qué anomalía soy?",
+                                    "Doblo las distancias, convierto una línea recta en un círculo y encierro universos en una caja. ¿Qué anomalía soy?",
+                                    "Juego con tu cordura, te implanto recuerdos falsos y te hago dudar de tu propia existencia. ¿Qué anomalía soy?",
+                                    "Devoro los ecos, apago las alarmas y hago que tus gritos sean inútiles. ¿Qué anomalía soy?",
+                                    "Protocolo de reconocimiento: Introduce el nombre de usuario registrado de tu perfil de Explorador actual.",
+                                    "Protocolo de verificación biométrica: Introduce la edad cronológica exacta de tu avatar actual.",
+                                    "Soy el sistema que te sostiene, la red que conecta y el programa maestro en el que operas. ¿Quién soy?",
+                                };
+
+                                string[] respuestasLore =
+                                {
+                                    "iris",
+                                    "tiempo",
+                                    "espacio",
+                                    "mente",
+                                    "silencio",
+                                    cadete.Nombre.ToLower(),
+                                    cadete.Edad.ToString(),
+                                    "nexus",
+                                };
+
+                                int indexLore = rndMinijuego.Next(preguntasLore.Length);
+
+                                Console.ForegroundColor = ConsoleColor.Magenta;
+                                Console.WriteLine("[PRUEBA DE CORDURA]: Responde a la siguiente consulta del sistema:");
+                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                Console.WriteLine($"\"{preguntasLore[indexLore]}\"");
+
+                                Console.Write("\nRespuesta: ");
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                string inputLore = Console.ReadLine().Trim().ToLower();
+                                Console.ForegroundColor = ConsoleColor.Cyan;
+
+                                if (inputLore == respuestasLore[indexLore]) minijuegoGanado = true;
+                                break;
+
+                            case 2: // MINIJUEGO 2: Secuencias Lógicas
+                                string[] secuencias =
+                                {
+                                    "2 - 4 - 8 - 16 - ?",          // Potencias de 2
+                                    "1 - 3 - 6 - 10 - ?",          // Números triangulares (+2, +3, +4..)
+                                    "0 - 1 - 1 - 2 - 3 - 5 - ?",   // Sucesión de Fibonacci
+                                    "2 - 3 - 5 - 7 - 11 - ?",      // Números primos
+                                    "99 - 88 - 77 - 66 - ?"        // Patrón visual descendente
+                                };
+                                string[] respuestasSecuencias = { "32", "15", "8", "13", "55" };
+
+                                int indexSec = rndMinijuego.Next(secuencias.Length);
+
+                                Console.ForegroundColor = ConsoleColor.Magenta;
+                                Console.WriteLine("[CALIBRACIÓN DE REACTOR]: Completa la siguiente secuencia cifrada:");
+                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                Console.WriteLine($"Secuencia: {secuencias[indexSec]}");
+
+                                Console.Write("\nIngresa el número faltante: ");
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                string inputSec = Console.ReadLine().Trim();
+                                Console.ForegroundColor = ConsoleColor.Cyan;
+
+                                if (inputSec == respuestasSecuencias[indexSec]) minijuegoGanado = true;
+                                break;
+
+                            case 3: // MINIJUEGO 3: Memoria Rápida
+                                string[] codigosMemoria =
+                                {
+                                    "N-3-X-U-5",
+                                    "O-M-E-G-A",
+                                    "1-R-1-S",
+                                    "V-0-1-D",
+                                    "Q-U-A-N-T-U-M",
+                                    "C-0-D-3",
+                                    "A-L-P-H-A"
+                                };
+
+                                int indexMem = rndMinijuego.Next(codigosMemoria.Length);
+
+                                Console.ForegroundColor = ConsoleColor.Magenta;
+                                Console.WriteLine("[FILTRO ANTIVIRUS]: Memoriza el siguiente código de autorización.");
+                                Console.WriteLine("El código se autodestruirá en 3 segundos...");
+
+                                Console.ForegroundColor = ConsoleColor.White;
+                                Console.WriteLine($"\nCÓDIGO: {codigosMemoria[indexMem]}");
+
+                                // espera
+                                Thread.Sleep(3000);
+
+                                // borrar pantalla y preguntar
+                                Console.Clear();
+                                Console.WriteLine("========================================");
+                                Console.ForegroundColor = ConsoleColor.Magenta;
+                                Console.WriteLine("[FILTRO ANTIVIRUS]: Código borrado de la interfaz.");
+
+                                Console.Write("\nIntroduce la secuencia exacta (con guiones si los tenía): ");
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                string inputMem = Console.ReadLine().Trim().ToUpper();
+                                Console.ForegroundColor = ConsoleColor.Cyan;
+
+                                if (inputMem == codigosMemoria[indexMem]) minijuegoGanado = true;
+                                break;
+
+                            case 4: // MINIJUEGO 4: Palabras Desordenadas
+                                string[] anagramas =
+                                {
+                                    "A O L N A I A M",
+                                    "S U E N X",
+                                    "S I I R",
+                                    "C D G O O I",
+                                    "E D A C E T",
+                                    "O P A S E I C"
+                                };
+                                string[] respuestasAnagramas =
+                                {
+                                    "anomalia",
+                                    "nexus",
+                                    "iris",
+                                    "codigo",
+                                    "cadete",
+                                    "espacio"
+                                };
+
+                                int indexAna = rndMinijuego.Next(anagramas.Length);
+
+                                Console.ForegroundColor = ConsoleColor.Magenta;
+                                Console.WriteLine("[SINCRONIZACIÓN CUÁNTICA]: Reconecta los datos corrompidos.");
+                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                Console.WriteLine($"Datos cifrados: {anagramas[indexAna]}");
+
+                                Console.Write("\nIngresa la palabra correcta: ");
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                string inputAna = Console.ReadLine().Trim().ToLower();
+                                Console.ForegroundColor = ConsoleColor.Cyan;
+
+                                if (inputAna == respuestasAnagramas[indexAna]) minijuegoGanado = true;
+                                break;
+                        }
+
+                        // ==========================================
+                        // RECOMPENSAAA
+                        // ==========================================
+                        if (minijuegoGanado)
+                        {
+                            cadete.Energia += 5;
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"\n[AUTORIZACIÓN ACEPTADA]: Extracción de energía completada con éxito.");
+                            Console.WriteLine($"+5 Energía recuperada.");
                         }
                         else
                         {
-                            Console.WriteLine($"{blanco}[SOPORTE]{cian} Los niveles de energía ya están al máximo.");
+                            cadete.Energia += 1; // premio de consuelo
+                            realidadAsignada.Estabilidad -= 5; // castigo
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"\n[ACCESO DENEGADO]: Filtro de seguridad fallido. Posible interferencia de IRIS detectada.");
+                            Console.WriteLine("El sistema apenas logró extraer energía (+1 Energía).");
+                            Console.WriteLine("La anomalía local aprovechó tu vulnerabilidad (-5 Estabilidad).");
                         }
+                        Console.ForegroundColor = ConsoleColor.Cyan;
                         break;
 
                     case 6: // Consultar estado
