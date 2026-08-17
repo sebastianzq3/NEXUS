@@ -445,6 +445,7 @@ namespace NEXUS
                                 Console.ForegroundColor = ConsoleColor.Cyan;
                             }
                         }
+                        
                         else
                         {
                             Console.ForegroundColor = ConsoleColor.Red;
@@ -657,6 +658,7 @@ namespace NEXUS
                         Console.WriteLine($"\n{magenta}1. OBJETIVO DE LA SIMULACIÓN:{cian}");
                         Console.WriteLine("Tu misión es adentrarte en simulaciones cuánticas inestables,");
                         Console.WriteLine("sobrevivir a sus peligros y mantener la ESTABILIDAD del mundo.");
+                        Console.WriteLine("Al llegar a 100% de estabilidad, se te asigna una nueva misión.");
                         Console.WriteLine("Si la Estabilidad cae a 20% o menos, la ANOMALÍA IRIS tomará el control.");
 
                         Console.WriteLine($"\n{verde}2. ENERGÍA Y RECURSOS:{cian}");
