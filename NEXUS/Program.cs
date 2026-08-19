@@ -82,6 +82,7 @@ namespace NEXUS
                 Console.WriteLine($"ESTABILIDAD:{verde}{realidadAsignada.Estabilidad}%{cian}");
                 Console.WriteLine("========================================\n");
 
+                Console.WriteLine("========================================\n");
                 Console.WriteLine($"1. Observar realidad");
                 Console.WriteLine($"2. Buscar objetos         {verde}[-3 Energía]{cian}");
                 Console.WriteLine($"3. Inventario");
@@ -90,6 +91,8 @@ namespace NEXUS
                 Console.WriteLine($"6. Consultar estado");
                 Console.WriteLine($"7. Manual del simulador");
                 Console.WriteLine($"8. Intentar desconexión");
+                Console.WriteLine("========================================\n");
+
 
                 // Mostrar la opción de Extracción de forma dinámica
                 if (realidadAsignada.Estabilidad >= 100)
