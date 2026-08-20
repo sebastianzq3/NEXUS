@@ -13,11 +13,6 @@ namespace NEXUS
             string verde = "\x1b[32m";
             string cian = "\u001b[96m";
             string magenta = "\u001b[95m";
-            string asd = "\u001b[95m";
-
-            string hsadjkgk = "\u001b[95m";
-
-            string mkgagenta = "\u001b[95m";
 
 
             // Nombre, edad, realidad asignada, nivel de energía, nivel
