@@ -123,59 +123,59 @@ namespace NEXUS
 
                         string[] pistasTiempo =
                         {
-            "Miras tu reloj y las manecillas giran frenéticamente en sentido contrario.",
-            "Notas que la piel de tus manos envejece y rejuvenece en cuestión de segundos.",
-            "Una gota de lluvia grisácea se detiene en el aire frente a tus ojos, completamente congelada.",
-            "Escuchas tus propios pasos resonar un par de segundos ANTES de que tu bota toque el suelo.",
-            "Una planta a tus pies brota, florece, se marchita y se convierte en polvo en un solo parpadeo.",
-            "El sol parece cruzar el cielo a tirones, haciendo que las sombras de tu entorno bailen de forma errática.",
-            "Tiras una pequeña piedra y, antes de tocar el suelo, vuelve volando hacia la palma de tu mano.",
-            "Sientes un fuerte déjà vu; jurarías que ya caminaste por este mismo sendero hace exactamente un minuto.",
-            "Tu respiración suena desfasada, como si estuvieras inhalando ayer y exhalando mañana.",
-            "Ves el cadáver de un insecto en el suelo recomponerse y salir volando en reversa."
-        };
+                            "Miras tu reloj y las manecillas giran frenéticamente en sentido contrario.",
+                            "Notas que la piel de tus manos envejece y rejuvenece en cuestión de segundos.",
+                            "Una gota de lluvia grisácea se detiene en el aire frente a tus ojos, completamente congelada.",
+                            "Escuchas tus propios pasos resonar un par de segundos ANTES de que tu bota toque el suelo.",
+                            "Una planta a tus pies brota, florece, se marchita y se convierte en polvo en un solo parpadeo.",
+                            "El sol parece cruzar el cielo a tirones, haciendo que las sombras de tu entorno bailen de forma errática.",
+                            "Tiras una pequeña piedra y, antes de tocar el suelo, vuelve volando hacia la palma de tu mano.",
+                            "Sientes un fuerte déjà vu; jurarías que ya caminaste por este mismo sendero hace exactamente un minuto.",
+                            "Tu respiración suena desfasada, como si estuvieras inhalando ayer y exhalando mañana.",
+                            "Ves el cadáver de un insecto en el suelo recomponerse y salir volando en reversa."
+                        };
 
                         string[] pistasEspacio =
                         {
-            "Caminas diez metros en línea recta, pero al darte la vuelta, tu punto de origen está a kilómetros de distancia.",
-            "Las paredes de la estructura cercana no se unen en ángulos rectos, formando esquinas imposibles que marean tu vista.",
-            "Un pilar a lo lejos parece inmenso, pero al dar un paso hacia él, se encoge hasta caber en la palma de tu mano.",
-            "Miras a través del reflejo de un charco y te ves a ti mismo de espaldas, mirándote a ti mismo.",
-            "El horizonte parece curvarse hacia arriba, encerrándote en un valle que se siente como el interior de una esfera.",
-            "Intentas alcanzar un escombro cercano, pero tu brazo parece estirarse sin llegar nunca a tocarlo.",
-            "Dejas caer una moneda y, en lugar de chocar con el piso, cae infinitamente a través de un abismo que no estaba ahí.",
-            "El camino frente a ti se bifurca en tres direcciones, pero las tres parecen llevar exactamente a la misma roca.",
-            "La topografía del terreno cambia cada vez que parpadeas, alterando las distancias de forma indetectable.",
-            "El cielo y el suelo parecen intercambiar lugares bruscamente durante una fracción de segundo."
-        };
+                            "Caminas diez metros en línea recta, pero al darte la vuelta, tu punto de origen está a kilómetros de distancia.",
+                            "Las paredes de la estructura cercana no se unen en ángulos rectos, formando esquinas imposibles que marean tu vista.",
+                            "Un pilar a lo lejos parece inmenso, pero al dar un paso hacia él, se encoge hasta caber en la palma de tu mano.",
+                            "Miras a través del reflejo de un charco y te ves a ti mismo de espaldas, mirándote a ti mismo.",
+                            "El horizonte parece curvarse hacia arriba, encerrándote en un valle que se siente como el interior de una esfera.",
+                            "Intentas alcanzar un escombro cercano, pero tu brazo parece estirarse sin llegar nunca a tocarlo.",
+                            "Dejas caer una moneda y, en lugar de chocar con el piso, cae infinitamente a través de un abismo que no estaba ahí.",
+                            "El camino frente a ti se bifurca en tres direcciones, pero las tres parecen llevar exactamente a la misma roca.",
+                            "La topografía del terreno cambia cada vez que parpadeas, alterando las distancias de forma indetectable.",
+                            "El cielo y el suelo parecen intercambiar lugares bruscamente durante una fracción de segundo."
+                        };
 
                         string[] pistasMente =
                         {
-            "Un recuerdo de tu infancia aflora, pero te das cuenta con terror de que le pertenece a otra persona.",
-            "Intentas recordar tu propio nombre por un segundo, pero tu cerebro se queda en un blanco absoluto.",
-            "Las sombras en el borde de tu visión toman formas humanoides que te observan con clara decepción.",
-            "Sientes la abrumadora certeza de que algo invisible está leyendo tus pensamientos en tiempo real.",
-            "Las letras del menú de tu traje parpadean y se transforman en símbolos incomprensibles que, extrañamente, puedes leer.",
-            "Sientes una profunda tristeza por la pérdida de un cadete compañero... un compañero que jamás existió.",
-            "Una voz idéntica a la tuya te susurra al oído que la única salida razonable es rendirse al vacío.",
-            "Cierras los ojos y, en lugar de oscuridad, ves un laberinto geométrico que pulsa al ritmo de tus latidos.",
-            "Comienzas a dudar si alguna vez entraste a la simulación NEXUS o si llevas toda tu vida atrapado aquí.",
-            "El miedo irracional de que tus propios brazos son sintéticos y no te pertenecen se apodera de tu razón."
-        };
+                            "Un recuerdo de tu infancia aflora, pero te das cuenta con terror de que le pertenece a otra persona.",
+                            "Intentas recordar tu propio nombre por un segundo, pero tu cerebro se queda en un blanco absoluto.",
+                            "Las sombras en el borde de tu visión toman formas humanoides que te observan con clara decepción.",
+                            "Sientes la abrumadora certeza de que algo invisible está leyendo tus pensamientos en tiempo real.",
+                            "Las letras del menú de tu traje parpadean y se transforman en símbolos incomprensibles que, extrañamente, puedes leer.",
+                            "Sientes una profunda tristeza por la pérdida de un cadete compañero... un compañero que jamás existió.",
+                            "Una voz idéntica a la tuya te susurra al oído que la única salida razonable es rendirse al vacío.",
+                            "Cierras los ojos y, en lugar de oscuridad, ves un laberinto geométrico que pulsa al ritmo de tus latidos.",
+                            "Comienzas a dudar si alguna vez entraste a la simulación NEXUS o si llevas toda tu vida atrapado aquí.",
+                            "El miedo irracional de que tus propios brazos son sintéticos y no te pertenecen se apodera de tu razón."
+                        };
 
                         string[] pistasSilencio =
                         {
-            "Pisas una rama seca. Se rompe en mil pedazos, pero el crujido es reemplazado por un vacío que lastima tus oídos.",
-            "Gritas con todas tus fuerzas, pero de tu garganta no sale absolutamente ningún sonido.",
-            "El aire es tan espeso y mudo que el latido de tu propio corazón se vuelve un tambor que te ensordece por completo.",
-            "Ves una enorme estructura colapsar a la distancia, cayendo en la más profunda y absoluta falta de ruido.",
-            "Chocas dos piezas de metal frente a tu rostro, pero el impacto no genera ni la más mínima vibración acústica.",
-            "El zumbido constante del sistema de tu traje de explorador se apaga; el vacío auditivo es casi asfixiante.",
-            "Sientes una presión enorme en los tímpanos, como si todo el sonido del mundo hubiera sido succionado hacia el cielo.",
-            "Intentas aplaudir, pero el impacto de tus palmas es absorbido por el ambiente como si golpearas bajo el agua.",
-            "La quietud es tan antinatural que sientes que hacer el más mínimo ruido podría quebrar la realidad como un cristal.",
-            "Escuchas un pitido agudo y constante dentro de tu cabeza, tu cerebro intentando compensar la muerte del sonido exterior."
-        };
+                            "Pisas una rama seca. Se rompe en mil pedazos, pero el crujido es reemplazado por un vacío que lastima tus oídos.",
+                            "Gritas con todas tus fuerzas, pero de tu garganta no sale absolutamente ningún sonido.",
+                            "El aire es tan espeso y mudo que el latido de tu propio corazón se vuelve un tambor que te ensordece por completo.",
+                            "Ves una enorme estructura colapsar a la distancia, cayendo en la más profunda y absoluta falta de ruido.",
+                            "Chocas dos piezas de metal frente a tu rostro, pero el impacto no genera ni la más mínima vibración acústica.",
+                            "El zumbido constante del sistema de tu traje de explorador se apaga; el vacío auditivo es casi asfixiante.",
+                            "Sientes una presión enorme en los tímpanos, como si todo el sonido del mundo hubiera sido succionado hacia el cielo.",
+                            "Intentas aplaudir, pero el impacto de tus palmas es absorbido por el ambiente como si golpearas bajo el agua.",
+                            "La quietud es tan antinatural que sientes que hacer el más mínimo ruido podría quebrar la realidad como un cristal.",
+                            "Escuchas un pitido agudo y constante dentro de tu cabeza, tu cerebro intentando compensar la muerte del sonido exterior."
+                        };
 
                         Random rndPista = new Random();
                         string pistaDescubierta = "";
@@ -216,16 +216,16 @@ namespace NEXUS
                             // variaciones de texto de ambientación
                             string[] textosExploracion = new string[]
                             {
-                $"Caminas por los senderos de {magenta}{realidadAsignada.Nombre}{cian} y vislumbras algo brillando en el suelo...",
-                $"Mientras exploras las ruinas de {magenta}{realidadAsignada.Nombre}{cian}, tropiezas con un artefacto inusual...",
-                $"Una extraña resonancia en {magenta}{realidadAsignada.Nombre}{cian} te guía hacia un objeto oculto...",
-                $"Escaneando la superficie de {magenta}{realidadAsignada.Nombre}{cian}, tu visor detecta una anomalía material...",
-                $"Entre las sombras de {magenta}{realidadAsignada.Nombre}{cian}, descubres algo que no pertenece a este lugar...",
-                $"Avanzas con cautela por {magenta}{realidadAsignada.Nombre}{cian} y encuentras los restos de un explorador anterior. Dejó caer algo...",
-                $"El viento cuántico de {magenta}{realidadAsignada.Nombre}{cian} aparta el polvo, revelando un misterioso artefacto...",
-                $"Inspeccionando una estructura inestable en {magenta}{realidadAsignada.Nombre}{cian}, hallas una pieza de equipo intacta...",
-                $"Sientes un leve tirón magnético en {magenta}{realidadAsignada.Nombre}{cian} que te lleva directamente hacia un ítem...",
-                $"Tras una larga caminata por los ecos de {magenta}{realidadAsignada.Nombre}{cian}, notas un objeto flotando en el aire..."
+                                $"Caminas por los senderos de {magenta}{realidadAsignada.Nombre}{cian} y vislumbras algo brillando en el suelo...",
+                                $"Mientras exploras las ruinas de {magenta}{realidadAsignada.Nombre}{cian}, tropiezas con un artefacto inusual...",
+                                $"Una extraña resonancia en {magenta}{realidadAsignada.Nombre}{cian} te guía hacia un objeto oculto...",
+                                $"Escaneando la superficie de {magenta}{realidadAsignada.Nombre}{cian}, tu visor detecta una anomalía material...",
+                                $"Entre las sombras de {magenta}{realidadAsignada.Nombre}{cian}, descubres algo que no pertenece a este lugar...",
+                                $"Avanzas con cautela por {magenta}{realidadAsignada.Nombre}{cian} y encuentras los restos de un explorador anterior. Dejó caer algo...",
+                                $"El viento cuántico de {magenta}{realidadAsignada.Nombre}{cian} aparta el polvo, revelando un misterioso artefacto...",
+                                $"Inspeccionando una estructura inestable en {magenta}{realidadAsignada.Nombre}{cian}, hallas una pieza de equipo intacta...",
+                                $"Sientes un leve tirón magnético en {magenta}{realidadAsignada.Nombre}{cian} que te lleva directamente hacia un ítem...",
+                                $"Tras una larga caminata por los ecos de {magenta}{realidadAsignada.Nombre}{cian}, notas un objeto flotando en el aire..."
                             };
 
                             Random rndExploracion = new Random();
@@ -452,27 +452,27 @@ namespace NEXUS
                             case 1: // MINIJUEGO 1: Acertijos de Lore
                                 string[] preguntasLore =
                                 {
-                    "Soy la inteligencia artificial que desertó y el virus que consume estas simulaciones. ¿Cuál es mi nombre?",
-                    "Mi flujo retrocede, marchito lo que nace y convierto los recuerdos en futuro. ¿Qué anomalía soy?",
-                    "Doblo las distancias, convierto una línea recta en un círculo y encierro universos en una caja. ¿Qué anomalía soy?",
-                    "Juego con tu cordura, te implanto recuerdos falsos y te hago dudar de tu propia existencia. ¿Qué anomalía soy?",
-                    "Devoro los ecos, apago las alarmas y hago que tus gritos sean inútiles. ¿Qué anomalía soy?",
-                    "Protocolo de reconocimiento: Introduce el nombre de usuario registrado de tu perfil de Explorador actual.",
-                    "Protocolo de verificación biométrica: Introduce la edad cronológica exacta de tu avatar actual.",
-                    "Soy el sistema que te sostiene, la red que conecta y el programa maestro en el que operas. ¿Quién soy?",
-                };
+                                    "Soy la inteligencia artificial que desertó y el virus que consume estas simulaciones. ¿Cuál es mi nombre?",
+                                    "Mi flujo retrocede, marchito lo que nace y convierto los recuerdos en futuro. ¿Qué anomalía soy?",
+                                    "Doblo las distancias, convierto una línea recta en un círculo y encierro universos en una caja. ¿Qué anomalía soy?",
+                                    "Juego con tu cordura, te implanto recuerdos falsos y te hago dudar de tu propia existencia. ¿Qué anomalía soy?",
+                                    "Devoro los ecos, apago las alarmas y hago que tus gritos sean inútiles. ¿Qué anomalía soy?",
+                                    "Protocolo de reconocimiento: Introduce el nombre de usuario registrado de tu perfil de Explorador actual.",
+                                    "Protocolo de verificación biométrica: Introduce la edad cronológica exacta de tu avatar actual.",
+                                    "Soy el sistema que te sostiene, la red que conecta y el programa maestro en el que operas. ¿Quién soy?",
+                                };
 
                                 string[] respuestasLore =
                                 {
-                    "iris",
-                    "tiempo",
-                    "espacio",
-                    "mente",
-                    "silencio",
-                    cadete.Nombre.ToLower(),
-                    cadete.Edad.ToString(),
-                    "nexus",
-                };
+                                    "iris",
+                                    "tiempo",
+                                    "espacio",
+                                    "mente",
+                                    "silencio",
+                                    cadete.Nombre.ToLower(),
+                                    cadete.Edad.ToString(),
+                                    "nexus",
+                                };
 
                                 int indexLore = rndMinijuego.Next(preguntasLore.Length);
 
@@ -490,12 +490,12 @@ namespace NEXUS
                             case 2: // MINIJUEGO 2: Secuencias Lógicas
                                 string[] secuencias =
                                 {
-                    "2 - 4 - 8 - 16 - ?",          // Potencias de 2
-                    "1 - 3 - 6 - 10 - ?",          // Números triangulares (+2, +3, +4..)
-                    "0 - 1 - 1 - 2 - 3 - 5 - ?",   // Sucesión de Fibonacci
-                    "2 - 3 - 5 - 7 - 11 - ?",      // Números primos
-                    "99 - 88 - 77 - 66 - ?"        // Patrón visual descendente
-                };
+                                    "2 - 4 - 8 - 16 - ?",          // Potencias de 2
+                                    "1 - 3 - 6 - 10 - ?",          // Números triangulares (+2, +3, +4..)
+                                    "0 - 1 - 1 - 2 - 3 - 5 - ?",   // Sucesión de Fibonacci
+                                    "2 - 3 - 5 - 7 - 11 - ?",      // Números primos
+                                    "99 - 88 - 77 - 66 - ?"        // Patrón visual descendente
+                                };
                                 string[] respuestasSecuencias = { "32", "15", "8", "13", "55" };
 
                                 int indexSec = rndMinijuego.Next(secuencias.Length);
@@ -514,14 +514,14 @@ namespace NEXUS
                             case 3: // MINIJUEGO 3: Memoria Rápida
                                 string[] codigosMemoria =
                                 {
-                    "N-3-X-U-5",
-                    "O-M-E-G-A",
-                    "1-R-1-S",
-                    "V-0-1-D",
-                    "Q-U-A-N-T-U-M",
-                    "C-0-D-3",
-                    "A-L-P-H-A"
-                };
+                                    "N-3-X-U-5",
+                                    "O-M-E-G-A",
+                                    "1-R-1-S",
+                                    "V-0-1-D",
+                                    "Q-U-A-N-T-U-M",
+                                    "C-0-D-3",
+                                    "A-L-P-H-A"
+                                };
 
                                 int indexMem = rndMinijuego.Next(codigosMemoria.Length);
 
@@ -549,22 +549,22 @@ namespace NEXUS
                             case 4: // MINIJUEGO 4: Palabras Desordenadas
                                 string[] anagramas =
                                 {
-                    "A O L N A I A M",
-                    "S U E N X",
-                    "S I I R",
-                    "C D G O O I",
-                    "E D A C E T",
-                    "O P A S E I C"
-                };
+                                    "A O L N A I A M",
+                                    "S U E N X",
+                                    "S I I R",
+                                    "C D G O O I",
+                                    "E D A C E T",
+                                    "O P A S E I C"
+                                };
                                 string[] respuestasAnagramas =
                                 {
-                    "anomalia",
-                    "nexus",
-                    "iris",
-                    "codigo",
-                    "cadete",
-                    "espacio"
-                };
+                                    "anomalia",
+                                    "nexus",
+                                    "iris",
+                                    "codigo",
+                                    "cadete",
+                                    "espacio"
+                                };
 
                                 int indexAna = rndMinijuego.Next(anagramas.Length);
 
