@@ -204,77 +204,94 @@ namespace NEXUS
                         break;
 
                     case 2: // Buscar objetos (Reduce energía, otorga experiencia y loot)
-                        if (cadete.Energia >= 3)
+
+                        // REGLA COMPUESTA 1: Tiene energía y el mundo es estable
+                        if (cadete.Energia >= 3 && realidadAsignada.Estabilidad >= 70)
                         {
                             cadete.Energia -= 3;
                             cadete.Experiencia += 25;
 
                             Console.Clear();
                             Console.WriteLine($"{cian}========================================");
-                            Console.WriteLine($"{blanco}[ACCIÓN]{cian} Explorando el sector...");
-
-                            // variaciones de texto de ambientación
-                            string[] textosExploracion = new string[]
-                            {
-                                $"Caminas por los senderos de {magenta}{realidadAsignada.Nombre}{cian} y vislumbras algo brillando en el suelo...",
-                                $"Mientras exploras las ruinas de {magenta}{realidadAsignada.Nombre}{cian}, tropiezas con un artefacto inusual...",
-                                $"Una extraña resonancia en {magenta}{realidadAsignada.Nombre}{cian} te guía hacia un objeto oculto...",
-                                $"Escaneando la superficie de {magenta}{realidadAsignada.Nombre}{cian}, tu visor detecta una anomalía material...",
-                                $"Entre las sombras de {magenta}{realidadAsignada.Nombre}{cian}, descubres algo que no pertenece a este lugar...",
-                                $"Avanzas con cautela por {magenta}{realidadAsignada.Nombre}{cian} y encuentras los restos de un explorador anterior. Dejó caer algo...",
-                                $"El viento cuántico de {magenta}{realidadAsignada.Nombre}{cian} aparta el polvo, revelando un misterioso artefacto...",
-                                $"Inspeccionando una estructura inestable en {magenta}{realidadAsignada.Nombre}{cian}, hallas una pieza de equipo intacta...",
-                                $"Sientes un leve tirón magnético en {magenta}{realidadAsignada.Nombre}{cian} que te lleva directamente hacia un ítem...",
-                                $"Tras una larga caminata por los ecos de {magenta}{realidadAsignada.Nombre}{cian}, notas un objeto flotando en el aire..."
-                            };
-
-                            Random rndExploracion = new Random();
-                            string ambientacion = textosExploracion[rndExploracion.Next(textosExploracion.Length)];
-
-                            // imprimir ambientación y crear el objeto encontrado
-                            Console.WriteLine($"\n{ambientacion}");
-
-                            Objeto lootEncontrado;
-                            bool yaLoTiene;
-
-                            // bucle hasta encontrar un objeto q no esté en el inventario
-                            do
-                            {
-                                lootEncontrado = new Objeto();
-                                yaLoTiene = false;
-
-                                foreach (Objeto item in cadete.Inventario)
-                                {
-                                    if (item.Nombre == lootEncontrado.Nombre)
-                                    {
-                                        yaLoTiene = true;
-                                        break;
-                                    }
-                                }
-
-                            } while (yaLoTiene); // Si la alarma está encendida, se repite todo.
-
-                            Console.WriteLine($"¡Has encontrado un(a) {magenta}{lootEncontrado.Nombre}{cian}!");
-
-                            // INTENTAR guardar el objeto
-                            bool guardado = cadete.RecogerObjeto(lootEncontrado); //esta funcion de usuario devolvía un bool dependiendo de la capacidad del inv
-
-                            if (guardado)
-                            {
-                                Console.WriteLine($"\n{verde}[ÉXITO]: El objeto ha sido almacenado en tu inventario de forma segura.{cian}");
-                            }
-                            else
-                            {
-                                Console.WriteLine($"\n{amarillo}[INVENTARIO LLENO]: Intentas guardar el(la) {lootEncontrado.Nombre}, pero no tienes espacio ({cadete.CapacidadInventario}/{cadete.CapacidadInventario}).");
-                                Console.WriteLine($"Al no poder contenerlo, el objeto pierde cohesión y desaparece frente a tus ojos.{cian}");
-                            }
-
-                            Console.WriteLine($"\n{verde}+25 EXP ganada por la exploración.{cian}");
+                            Console.WriteLine($"{blanco}[ACCIÓN]{cian} Explorando el sector de forma segura...");
                         }
+                        // REGLA COMPUESTA 2: Tiene energía pero el mundo es INESTABLE
+                        else if (cadete.Energia >= 3 && realidadAsignada.Estabilidad < 70)
+                        {
+                            // En un mundo inestable cuesta más energía moverse, pero aprendes más
+                            cadete.Energia -= 4;
+                            cadete.Experiencia += 35;
+
+                            Console.Clear();
+                            Console.WriteLine($"{cian}========================================");
+                            Console.WriteLine($"{blanco}[ACCIÓN]{cian} Explorando un sector inestable...");
+                            Console.WriteLine($"{amarillo}Advertencia: La inestabilidad cuántica exige mayor esfuerzo. (-1 Energía adicional){cian}");
+                        }
+                        // REGLA 3: No tiene energía
                         else
                         {
                             Console.WriteLine($"{rojo}NEXUS ADVIERTE: Energía insuficiente para explorar y buscar objetos.{cian}");
+                            break; // corta el case 2 aquí mismo para que no busque objetos
                         }
+
+
+                        // variaciones de texto de ambientación
+                        string[] textosExploracion = new string[]
+                        {
+                            $"Caminas por los senderos de {magenta}{realidadAsignada.Nombre}{cian} y vislumbras algo brillando en el suelo...",
+                            $"Mientras exploras las ruinas de {magenta}{realidadAsignada.Nombre}{cian}, tropiezas con un artefacto inusual...",
+                            $"Una extraña resonancia en {magenta}{realidadAsignada.Nombre}{cian} te guía hacia un objeto oculto...",
+                            $"Escaneando la superficie de {magenta}{realidadAsignada.Nombre}{cian}, tu visor detecta una anomalía material...",
+                            $"Entre las sombras de {magenta}{realidadAsignada.Nombre}{cian}, descubres algo que no pertenece a este lugar...",
+                            $"Avanzas con cautela por {magenta}{realidadAsignada.Nombre}{cian} y encuentras los restos de un explorador anterior. Dejó caer algo...",
+                            $"El viento cuántico de {magenta}{realidadAsignada.Nombre}{cian} aparta el polvo, revelando un misterioso artefacto...",
+                            $"Inspeccionando una estructura inestable en {magenta}{realidadAsignada.Nombre}{cian}, hallas una pieza de equipo intacta...",
+                            $"Sientes un leve tirón magnético en {magenta}{realidadAsignada.Nombre}{cian} que te lleva directamente hacia un ítem...",
+                            $"Tras una larga caminata por los ecos de {magenta}{realidadAsignada.Nombre}{cian}, notas un objeto flotando en el aire..."
+                        };
+
+                        Random rndExploracion = new Random();
+                        string ambientacion = textosExploracion[rndExploracion.Next(textosExploracion.Length)];
+
+                        // imprimir ambientación y crear el objeto encontrado
+                        Console.WriteLine($"\n{ambientacion}");
+
+                        Objeto lootEncontrado;
+                        bool yaLoTiene;
+
+                        // bucle hasta encontrar un objeto q no esté en el inventario
+                        do
+                        {
+                            lootEncontrado = new Objeto();
+                            yaLoTiene = false;
+
+                            foreach (Objeto item in cadete.Inventario)
+                            {
+                                if (item.Nombre == lootEncontrado.Nombre)
+                                {
+                                    yaLoTiene = true;
+                                    break;
+                                }
+                            }
+
+                        } while (yaLoTiene); // Si la alarma está encendida, se repite todo.
+
+                        Console.WriteLine($"¡Has encontrado un(a) {magenta}{lootEncontrado.Nombre}{cian}!");
+
+                        // INTENTAR guardar el objeto
+                        bool guardado = cadete.RecogerObjeto(lootEncontrado); //esta funcion de usuario devolvía un bool dependiendo de la capacidad del inv
+
+                        if (guardado)
+                        {
+                            Console.WriteLine($"\n{verde}[ÉXITO]: El objeto ha sido almacenado en tu inventario de forma segura.{cian}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"\n{amarillo}[INVENTARIO LLENO]: Intentas guardar el(la) {lootEncontrado.Nombre}, pero no tienes espacio ({cadete.CapacidadInventario}/{cadete.CapacidadInventario}).");
+                            Console.WriteLine($"Al no poder contenerlo, el objeto pierde cohesión y desaparece frente a tus ojos.{cian}");
+                        }
+
+                        Console.WriteLine($"\n{verde}Experiencia ganada por la exploración registrada.{cian}");
                         break;
 
                     case 3: // Inventario
@@ -589,13 +606,36 @@ namespace NEXUS
                             Console.WriteLine($"\n{verde}[AUTORIZACIÓN ACEPTADA]: Extracción de energía completada con éxito.");
                             Console.WriteLine($"+5 Energía recuperada.{cian}");
                         }
-                        else
+                        else if (!minijuegoGanado && realidadAsignada.Estabilidad > 50)
                         {
                             cadete.Energia += 1; // premio de consuelo
-                            realidadAsignada.Estabilidad -= 5; // castigo
+                            Console.WriteLine($"\n{amarillo}[ACCESO DENEGADO]: Filtro de seguridad fallido.");
+                            Console.WriteLine("El sistema apenas logró extraer energía (+1 Energía).");
+                            Console.WriteLine($"La realidad es lo suficientemente estable para absorber el impacto del error.{cian}");
+                        }
+                        else if (!minijuegoGanado && realidadAsignada.Estabilidad <= 50)
+                        {
+                            cadete.Energia += 1; // premio de consuelo
+                            realidadAsignada.Estabilidad -= 15; // castigo
                             Console.WriteLine($"\n{rojo}[ACCESO DENEGADO]: Filtro de seguridad fallido. Posible interferencia de IRIS detectada.");
                             Console.WriteLine("El sistema apenas logró extraer energía (+1 Energía).");
-                            Console.WriteLine($"La anomalía local aprovechó tu vulnerabilidad (-5 Estabilidad).{cian}");
+                            Console.WriteLine($"La anomalía local aprovechó tu vulnerabilidad, provocando un colapso parcial (-15 Estabilidad).");
+
+                            // destruir un objeto al azar del inventario
+                            if (cadete.Inventario.Count > 0)
+                            {
+                                Random rndDestruccion = new Random();
+                                int indexDestruir = rndDestruccion.Next(cadete.Inventario.Count);
+                                Objeto objPerdido = cadete.Inventario[indexDestruir];
+
+                                cadete.DescartarObjeto(objPerdido);
+
+                                Console.WriteLine($"[CATÁSTROFE]: La sobrecarga energética corrompió tu equipo. Has perdido el objeto: {magenta}{objPerdido.Nombre}{rojo}.{cian}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"[CATÁSTROFE]: La sobrecarga casi fríe tu traje. Tienes suerte de no tener objetos que perder.{cian}");
+                            }
                         }
                         break;
 
