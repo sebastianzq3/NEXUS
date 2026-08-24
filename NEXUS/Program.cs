@@ -742,11 +742,47 @@ namespace NEXUS
                 // EVENTO DE EMERGENCIA: ANOMALÍA IRIS
                 if (conectado && realidadAsignada.Estabilidad <= 20)
                 {
+                    Console.Clear();
                     Console.WriteLine($"{fondoRojo}{blanco}----------------------------------------{reset}");
                     Console.WriteLine($"{fondoRojo}{blanco}        ALERTA DE INTERFERENCIA IRIS    {reset}");
                     Console.WriteLine($"{fondoRojo}{blanco}----------------------------------------{reset}");
                     Console.WriteLine($"{rojo}La estabilidad de la realidad está alcanzando niveles críticos.");
-                    Console.WriteLine($"NEXUS recomienda recuperación inmediata o desconexión.{cian}");
+                    Console.WriteLine($"NEXUS recomienda recuperación inmediata o desconexión.");
+
+                    // pausa dramática
+                    Thread.Sleep(1500);
+
+                    Console.WriteLine($"\n{magenta}[SISTEMA COMPROMETIDO]{rojo}");
+                    Console.WriteLine("IRIS: TE HE ENCONTRADO, EXPLORADOR.");
+                    Console.WriteLine("ESTA REALIDAD ME PERTENECE AHORA. RÍNDETE O ENFRENTA EL VACÍO.");
+
+                    // sacrificio de energía o perder
+                    Console.Write($"\n{amarillo}NEXUS: ¿Transferir toda tu energía restante ({cadete.Energia}) para forzar un reinicio y repeler a IRIS? (S/N): {verde}");
+                    string decisionIris = Console.ReadLine().Trim().ToUpper();
+                    Console.Write(cian);
+
+                    if (decisionIris == "S")
+                    {
+                        Console.WriteLine($"\n{blanco}[NEXUS]{cian} Ejecutando purga de emergencia...");
+                        Thread.Sleep(1000);
+
+                        // reiniciar energía a cambio de estabilidad
+                        cadete.Energia = 0;
+                        realidadAsignada.Estabilidad += 15;
+
+                        Console.WriteLine($"{verde}Purga exitosa. IRIS repelida temporalmente.");
+                        Console.WriteLine($"Energía agotada por completo. Estabilidad restaurada levemente (+15).{cian}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"\n{magenta}IRIS: {rojo}ENTONCES DESAPARECE EN LA NADA.");
+                        Thread.Sleep(1000);
+
+                        // perder juego
+                        Console.WriteLine($"{blanco}[SISTEMA NEXUS]{rojo} Conexión cortada remotamente.");
+                        Console.WriteLine($"Simulación abortada por falla de seguridad.{reset}");
+                        conectado = false;
+                    }
                 }
 
                 if (conectado)
