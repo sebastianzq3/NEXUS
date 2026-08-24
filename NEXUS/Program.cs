@@ -60,10 +60,12 @@ namespace NEXUS
 
             // Asignación realidad  
             Realidad realidadAsignada = new Realidad();
-            Console.WriteLine($"\n{blanco}[SISTEMA NEXUS]{cian} Sincronizando coordenadas cuánticas...");
+            Console.Write($"\n{blanco}[SISTEMA NEXUS]{cian} Sincronizando coordenadas cuánticas");
+            DibujarPuntosSuspensivos(3);
             Console.Write($"{blanco}[SISTEMA NEXUS]{cian} Realidad asignada al cadete: {magenta}{realidadAsignada.Nombre}{cian}");
 
-            Console.WriteLine("\nPresiona cualquier tecla para entrar a la simulación...");
+            Console.Write("\nPresiona cualquier tecla para entrar a la simulación");
+            DibujarPuntosSuspensivos(3);
             Console.ReadKey();
 
             bool conectado = true;
@@ -72,13 +74,16 @@ namespace NEXUS
             {
                 Console.Clear();
                 Console.Write(cian);
-                Console.WriteLine("========================================");
+                DibujarSeparadorAnimado(cian);
                 Console.WriteLine($"         {blanco}NEXUS TRAINING SYSTEM{cian}");
-                Console.WriteLine("========================================");
+                DibujarSeparadorAnimado(cian);
                 Console.WriteLine($"EXPLORADOR: {verde}{cadete.Nombre}{cian}");
+                Thread.Sleep(10);
                 Console.WriteLine($"REALIDAD:   {magenta}{realidadAsignada.Nombre}{cian}");
                 // Barra de Energía con barritas verde
-                Console.Write($"ENERGÍA:    {verde}{cadete.Energia}/{cadete.EnergiaMax}{cian} [");
+                Console.Write($"ENERGÍA:    {verde}{cadete.Energia}/{cadete.EnergiaMax}{cian}");
+                if (cadete.Energia >= 10) Console.Write(" [");
+                else Console.Write("  [");
                 for (int i = 0; i<cadete.EnergiaMax; i++)
                 {
                     if (i <= cadete.Energia) Console.Write($"{verde}█");
@@ -86,11 +91,13 @@ namespace NEXUS
                     Console.Write(" ");
                 }
                 Console.WriteLine($"{cian}]");
+                Thread.Sleep(10);
 
                 // Barra de Estabilidad (Porcentaje aproximado)
-                Console.Write($"ESTABILIDAD:{verde}{realidadAsignada.Estabilidad}%{cian}  ");
-                if (realidadAsignada.Estabilidad < 100) Console.Write(" [");
-                else Console.Write("[");
+                Console.Write($"ESTABILIDAD:{verde}{realidadAsignada.Estabilidad}%{cian} ");
+                if (realidadAsignada.Estabilidad < 100) Console.Write("  [");
+                else if (realidadAsignada.Estabilidad < 10) Console.Write("[");
+                else Console.Write(" [");
                 int bloquesEstabilidad = realidadAsignada.Estabilidad / 10; // Convierte 0-100 a 0-10
 
                 for (int i = 0; i < 10; i++) // La barra siempre medirá 10 espacios de largo
@@ -101,18 +108,27 @@ namespace NEXUS
                     Console.Write(" ");
                 }
                 Console.WriteLine($"{cian}]");
-                Console.WriteLine("========================================\n");
+                Thread.Sleep(10);
 
-                Console.WriteLine("========================================\n");
+                DibujarSeparadorAnimado(cian);
+
+                DibujarSeparadorAnimado(cian);
                 Console.WriteLine($"1. Observar realidad");
+                Thread.Sleep(10);
                 Console.WriteLine($"2. Buscar objetos         {verde}[-3 Energía]{cian}");
+                Thread.Sleep(10);
                 Console.WriteLine($"3. Inventario");
+                Thread.Sleep(10);
                 Console.WriteLine($"4. Utilizar objeto        {verde}[-2 Energía]{cian}");
+                Thread.Sleep(10);
                 Console.WriteLine($"5. Recuperar energía      {verde}[+5 Recarga]{cian}");
                 Console.WriteLine($"6. Consultar estado");
+                Thread.Sleep(10);
                 Console.WriteLine($"7. Manual del simulador");
+                Thread.Sleep(10);
                 Console.WriteLine($"8. Intentar desconexión");
-                Console.WriteLine("========================================\n");
+                Thread.Sleep(10);
+                DibujarSeparadorAnimado(cian);
 
 
                 // Mostrar la opción de Extracción de forma dinámica
@@ -139,9 +155,17 @@ namespace NEXUS
                 {
                     case 1: // Observar realidad (Pistas narrativas)
                         Console.Clear();
-                        Console.WriteLine($"{cian}========================================");
-                        Console.WriteLine($"{blanco}[SENSORIAL]{cian} Sintonizando los ecos de {magenta}{realidadAsignada.Nombre}{cian}...");
+                        Console.WriteLine($"{blanco}[SENSORIAL]{cian} Sintonizando los ecos de {magenta}{realidadAsignada.Nombre}{cian}");
 
+                        // Efecto de suspenso
+                        Console.Write($"{gris}Analizando fluctuaciones cuánticas");
+                        for (int i = 0; i < 6; i++)
+                        {
+                            Thread.Sleep(400);
+                            Console.Write(".");
+                        }
+                        Console.WriteLine();
+                        Thread.Sleep(600);
 
                         string[] pistasTiempo =
                         {
@@ -221,7 +245,7 @@ namespace NEXUS
 
                         // Mostramos la pista al jugador de forma misteriosa
                         Console.WriteLine($"\n{amarillo}[OBSERVACIÓN]: \"{pistaDescubierta}\"{cian}");
-
+                        Thread.Sleep(10);
                         Console.WriteLine($"\n{gris}Revisa tu inventario. ¿Tienes algo que contrarreste esto?{cian}");
                         break;
 
@@ -234,8 +258,9 @@ namespace NEXUS
                             cadete.Experiencia += 25;
 
                             Console.Clear();
-                            Console.WriteLine($"{cian}========================================");
-                            Console.WriteLine($"{blanco}[ACCIÓN]{cian} Explorando el sector de forma segura...");
+                            DibujarSeparadorAnimado(cian);
+                            Console.Write($"{blanco}[ACCIÓN]{cian} Explorando el sector de forma segura");
+                            DibujarPuntosSuspensivos(3);
                         }
                         // REGLA COMPUESTA 2: Tiene energía pero el mundo es INESTABLE
                         else if (cadete.Energia >= 3 && realidadAsignada.Estabilidad < 70)
@@ -245,8 +270,9 @@ namespace NEXUS
                             cadete.Experiencia += 35;
 
                             Console.Clear();
-                            Console.WriteLine($"{cian}========================================");
-                            Console.WriteLine($"{blanco}[ACCIÓN]{cian} Explorando un sector inestable...");
+                            DibujarSeparadorAnimado(cian);
+                            Console.Write($"{blanco}[ACCIÓN]{cian} Explorando un sector inestable");
+                            DibujarPuntosSuspensivos(3);
                             Console.WriteLine($"{amarillo}Advertencia: La inestabilidad cuántica exige mayor esfuerzo. (-1 Energía adicional){cian}");
                         }
                         // REGLA 3: No tiene energía
@@ -260,23 +286,24 @@ namespace NEXUS
                         // variaciones de texto de ambientación
                         string[] textosExploracion = new string[]
                         {
-                            $"Caminas por los senderos de {magenta}{realidadAsignada.Nombre}{cian} y vislumbras algo brillando en el suelo...",
-                            $"Mientras exploras las ruinas de {magenta}{realidadAsignada.Nombre}{cian}, tropiezas con un artefacto inusual...",
-                            $"Una extraña resonancia en {magenta}{realidadAsignada.Nombre}{cian} te guía hacia un objeto oculto...",
-                            $"Escaneando la superficie de {magenta}{realidadAsignada.Nombre}{cian}, tu visor detecta una anomalía material...",
-                            $"Entre las sombras de {magenta}{realidadAsignada.Nombre}{cian}, descubres algo que no pertenece a este lugar...",
-                            $"Avanzas con cautela por {magenta}{realidadAsignada.Nombre}{cian} y encuentras los restos de un explorador anterior. Dejó caer algo...",
-                            $"El viento cuántico de {magenta}{realidadAsignada.Nombre}{cian} aparta el polvo, revelando un misterioso artefacto...",
-                            $"Inspeccionando una estructura inestable en {magenta}{realidadAsignada.Nombre}{cian}, hallas una pieza de equipo intacta...",
-                            $"Sientes un leve tirón magnético en {magenta}{realidadAsignada.Nombre}{cian} que te lleva directamente hacia un ítem...",
-                            $"Tras una larga caminata por los ecos de {magenta}{realidadAsignada.Nombre}{cian}, notas un objeto flotando en el aire..."
+                            $"Caminas por los senderos de {magenta}{realidadAsignada.Nombre}{cian} y vislumbras algo brillando en el suelo",
+                            $"Mientras exploras las ruinas de {magenta}{realidadAsignada.Nombre}{cian}, tropiezas con un artefacto inusual",
+                            $"Una extraña resonancia en {magenta}{realidadAsignada.Nombre}{cian} te guía hacia un objeto oculto",
+                            $"Escaneando la superficie de {magenta}{realidadAsignada.Nombre}{cian}, tu visor detecta una anomalía material",
+                            $"Entre las sombras de {magenta}{realidadAsignada.Nombre}{cian}, descubres algo que no pertenece a este lugar",
+                            $"Avanzas con cautela por {magenta}{realidadAsignada.Nombre}{cian} y encuentras los restos de un explorador anterior. Dejó caer algo",
+                            $"El viento cuántico de {magenta}{realidadAsignada.Nombre}{cian} aparta el polvo, revelando un misterioso artefacto",
+                            $"Inspeccionando una estructura inestable en {magenta}{realidadAsignada.Nombre}{cian}, hallas una pieza de equipo intacta",
+                            $"Sientes un leve tirón magnético en {magenta}{realidadAsignada.Nombre}{cian} que te lleva directamente hacia un ítem",
+                            $"Tras una larga caminata por los ecos de {magenta}{realidadAsignada.Nombre}{cian}, notas un objeto flotando en el aire"
                         };
 
                         Random rndExploracion = new Random();
                         string ambientacion = textosExploracion[rndExploracion.Next(textosExploracion.Length)];
 
                         // imprimir ambientación y crear el objeto encontrado
-                        Console.WriteLine($"\n{ambientacion}");
+                        Console.Write($"\n{ambientacion}");
+                        DibujarPuntosSuspensivos(3);
 
                         Objeto lootEncontrado;
                         bool yaLoTiene;
@@ -310,31 +337,37 @@ namespace NEXUS
                         else
                         {
                             Console.WriteLine($"\n{amarillo}[INVENTARIO LLENO]: Intentas guardar el(la) {lootEncontrado.Nombre}, pero no tienes espacio ({cadete.CapacidadInventario}/{cadete.CapacidadInventario}).");
+                            Thread.Sleep(10);
                             Console.WriteLine($"Al no poder contenerlo, el objeto pierde cohesión y desaparece frente a tus ojos.{cian}");
                         }
-
+                        Thread.Sleep(10);
                         Console.WriteLine($"\n{verde}Experiencia ganada por la exploración registrada.{cian}");
                         break;
 
                     case 3: // Inventario
                         Console.WriteLine($"{blanco}[INVENTARIO DEL EXPLORADOR]{cian}");
+                        Thread.Sleep(15);
 
                         // Inventario vacío?
                         if (cadete.Inventario.Count == 0)
                         {
                             Console.WriteLine($"{amarillo}Tu inventario está vacío. No tienes objetos para inspeccionar.{cian}");
+                            Thread.Sleep(10);
                         }
                         else
                         {
                             // 1. Mostrar la lista de objetos enumerados
                             Console.WriteLine($"Capacidad actual: {cadete.Inventario.Count}/{cadete.CapacidadInventario}\n");
+                            Thread.Sleep(10);
                             for (int i = 0; i < cadete.Inventario.Count; i++)
                             {
                                 Console.WriteLine($"{i + 1}. {verde}{cadete.Inventario[i].Nombre}{cian}");
+                                Thread.Sleep(10);
                             }
 
                             // 2. Pedir selección
                             Console.Write($"\n{cian}Selecciona el número del objeto para inspeccionarlo (o presiona '0' para cancelar): ");
+                            Thread.Sleep(10);
                             Console.Write(verde);
                             string inputInventario = Console.ReadLine();
                             Console.Write(cian);
@@ -347,10 +380,15 @@ namespace NEXUS
                                     Objeto objetoSeleccionado = cadete.Inventario[indiceObjeto - 1]; // restamos 1 para q siga los índices del menú
 
                                     Console.WriteLine($"\n{blanco}--- ANÁLISIS DE OBJETO ---{cian}");
+                                    Thread.Sleep(10);
                                     Console.WriteLine($"Nombre:      {magenta}{objetoSeleccionado.Nombre}{cian}");
+                                    Thread.Sleep(10);
                                     Console.WriteLine($"Usos rest.:  {verde}{objetoSeleccionado.Usos}{cian}");
+                                    Thread.Sleep(10);
                                     Console.WriteLine($"Descripción: {blanco}{objetoSeleccionado.Descripcion}{cian}");
+                                    Thread.Sleep(10);
                                     Console.WriteLine($"{blanco}--------------------------{cian}");
+                                    Thread.Sleep(10);
 
                                     // Pregunta si desea descartarlo
                                     Console.Write($"\n¿Deseas descartar {magenta}{objetoSeleccionado.Nombre}{cian} para liberar espacio? (S/N): ");
@@ -364,10 +402,12 @@ namespace NEXUS
                                         cadete.DescartarObjeto(objetoSeleccionado);
 
                                         Console.WriteLine($"\n{rojo}[SISTEMA] {objetoSeleccionado.Nombre} ha sido destruido en el vacío cuántico.{cian}");
+                                        Thread.Sleep(10);
                                     }
                                     else
                                     {
                                         Console.WriteLine($"\n{blanco}[SISTEMA]{cian} El objeto permanece seguro en tu inventario.");
+                                        Thread.Sleep(10);
                                     }
                                 }
                                 else if (indiceObjeto == 0)
@@ -387,7 +427,8 @@ namespace NEXUS
                         break;
 
                     case 4: // Utilizar objeto
-                        Console.WriteLine($"{blanco}[INTERACCIÓN]{cian} Preparando interfaz de manipulación cuántica...");
+                        Console.Write($"{blanco}[INTERACCIÓN]{cian} Preparando interfaz de manipulación cuántica");
+                        DibujarPuntosSuspensivos(3);
 
                         // inventario tiene objetos?
                         if (cadete.Inventario.Count == 0)
@@ -398,9 +439,11 @@ namespace NEXUS
 
                         // mostrar inv
                         Console.WriteLine("Selecciona un objeto de tu inventario:\n");
+                        Thread.Sleep(10);
                         for (int i = 0; i < cadete.Inventario.Count; i++)
                         {
                             Console.WriteLine($"{i + 1}. {verde}{cadete.Inventario[i].Nombre}{cian} (Usos restantes: {cadete.Inventario[i].Usos})");
+                            Thread.Sleep(5);
                         }
 
                         Console.Write("\nIngresa el número del objeto a utilizar (o '0' para cancelar): ");
@@ -423,8 +466,9 @@ namespace NEXUS
                                     objetoUsado.Usos--;
 
                                     Console.Clear();
-                                    Console.WriteLine($"========================================");
-                                    Console.WriteLine($"{blanco}[ACCIÓN]{cian} Desplegando {magenta}{objetoUsado.Nombre}{cian}...");
+                                    DibujarSeparadorAnimado(cian);
+                                    Console.Write($"{blanco}[ACCIÓN]{cian} Desplegando {magenta}{objetoUsado.Nombre}{cian}");
+                                    DibujarPuntosSuspensivos(3);
                                     Console.WriteLine($"{blanco}{objetoUsado.Descripcion}{cian}\n");
 
                                     // objeto contrarresta la anomalía actual?
@@ -432,13 +476,17 @@ namespace NEXUS
                                     {
                                         realidadAsignada.Estabilidad += 30; // recompensa
                                         Console.WriteLine($"{verde}[ÉXITO]: La frecuencia del objeto resuena perfectamente con la anomalía.");
+                                        Thread.Sleep(10);
                                         Console.WriteLine($"La estructura de la realidad se fortalece (+30 Estabilidad).{cian}");
+                                        Thread.Sleep(10);
                                     }
                                     else
                                     {
                                         realidadAsignada.Estabilidad -= 15; // penalización
                                         Console.WriteLine($"{rojo}[INEFICAZ]: ¡Error de cálculo! Tu {objetoUsado.Nombre} no hizo absolutamente nada contra la anomalía.");
+                                        Thread.Sleep(10);
                                         Console.WriteLine($"Tu torpe interferencia solo alteró el delicado equilibrio local, empeorando la situación (-15 Estabilidad).{cian}");
+                                        Thread.Sleep(10);
                                     }
 
                                     // 6. Si el objeto se queda sin usos, lo destruimos automáticamente
@@ -455,7 +503,8 @@ namespace NEXUS
                             }
                             else if (indiceUso == 0)
                             {
-                                Console.WriteLine($"{blanco}[SISTEMA]{cian} Interacción cancelada. Retornando al menú...");
+                                Console.Write($"{blanco}[SISTEMA]{cian} Interacción cancelada. Retornando al menú");
+                                DibujarPuntosSuspensivos(3);
                             }
                             else
                             {
@@ -477,10 +526,11 @@ namespace NEXUS
                         }
 
                         Console.Clear();
-                        Console.WriteLine("========================================");
-                        Console.WriteLine($"{blanco}[SOPORTE VITAL]{cian} Iniciando protocolo de recarga...");
+                        DibujarSeparadorAnimado(cian);
+                        Console.Write($"{blanco}[SOPORTE VITAL]{cian} Iniciando protocolo de recarga");
+                        DibujarPuntosSuspensivos(3);
                         Console.WriteLine("Para extraer energía de la red, debes superar un filtro de seguridad de NEXUS.");
-                        Console.WriteLine("========================================\n");
+                        DibujarSeparadorAnimado(cian);
 
                         Random rndMinijuego = new Random();
                         int tipoJuego = rndMinijuego.Next(1, 5);
@@ -516,7 +566,9 @@ namespace NEXUS
                                 int indexLore = rndMinijuego.Next(preguntasLore.Length);
 
                                 Console.WriteLine($"{magenta}[PRUEBA DE CORDURA]: Responde a la siguiente consulta del sistema:");
+                                Thread.Sleep(10);
                                 Console.WriteLine($"{amarillo}\"{preguntasLore[indexLore]}\"{cian}");
+                                Thread.Sleep(10);
 
                                 Console.Write("\nRespuesta: ");
                                 Console.Write(verde);
@@ -540,7 +592,9 @@ namespace NEXUS
                                 int indexSec = rndMinijuego.Next(secuencias.Length);
 
                                 Console.WriteLine($"{magenta}[CALIBRACIÓN DE REACTOR]: Completa la siguiente secuencia cifrada:");
+                                Thread.Sleep(10);
                                 Console.WriteLine($"{amarillo}Secuencia: {secuencias[indexSec]}{cian}");
+                                Thread.Sleep(10);
 
                                 Console.Write("\nIngresa el número faltante: ");
                                 Console.Write(verde);
@@ -565,7 +619,9 @@ namespace NEXUS
                                 int indexMem = rndMinijuego.Next(codigosMemoria.Length);
 
                                 Console.WriteLine($"{magenta}[FILTRO ANTIVIRUS]: Memoriza el siguiente código de autorización.");
-                                Console.WriteLine($"El código se autodestruirá en 3 segundos...{cian}");
+                                Thread.Sleep(10);
+                                Console.WriteLine($"El código se autodestruirá en 3 segundos");
+                                DibujarPuntosSuspensivos(3);
 
                                 Console.WriteLine($"\n{blanco}CÓDIGO: {codigosMemoria[indexMem]}{cian}");
 
@@ -574,9 +630,9 @@ namespace NEXUS
 
                                 // borrar pantalla y preguntar
                                 Console.Clear();
-                                Console.WriteLine("========================================");
+                                DibujarSeparadorAnimado(cian);
                                 Console.WriteLine($"{magenta}[FILTRO ANTIVIRUS]: Código borrado de la interfaz.{cian}");
-
+                                Thread.Sleep(10);
                                 Console.Write("\nIntroduce la secuencia exacta (con guiones si los tenía): ");
                                 Console.Write(verde);
                                 string inputMem = Console.ReadLine().Trim().ToUpper();
@@ -608,7 +664,9 @@ namespace NEXUS
                                 int indexAna = rndMinijuego.Next(anagramas.Length);
 
                                 Console.WriteLine($"{magenta}[SINCRONIZACIÓN CUÁNTICA]: Reconecta los datos corrompidos.");
+                                Thread.Sleep(10);
                                 Console.WriteLine($"{amarillo}Datos cifrados: {anagramas[indexAna]}{cian}");
+                                Thread.Sleep(10);
 
                                 Console.Write("\nIngresa la palabra correcta: ");
                                 Console.Write(verde);
@@ -626,23 +684,30 @@ namespace NEXUS
                         {
                             cadete.Energia += 5;
                             Console.WriteLine($"\n{verde}[AUTORIZACIÓN ACEPTADA]: Extracción de energía completada con éxito.");
+                            Thread.Sleep(10);
                             Console.WriteLine($"+5 Energía recuperada.{cian}");
+                            Thread.Sleep(10);
                         }
                         else if (!minijuegoGanado && realidadAsignada.Estabilidad > 50)
                         {
                             cadete.Energia += 1; // premio de consuelo
                             Console.WriteLine($"\n{amarillo}[ACCESO DENEGADO]: Filtro de seguridad fallido.");
+                            Thread.Sleep(10);
                             Console.WriteLine("El sistema apenas logró extraer energía (+1 Energía).");
+                            Thread.Sleep(10);
                             Console.WriteLine($"La realidad es lo suficientemente estable para absorber el impacto del error.{cian}");
+                            Thread.Sleep(10);
                         }
                         else if (!minijuegoGanado && realidadAsignada.Estabilidad <= 50)
                         {
                             cadete.Energia += 1; // premio de consuelo
                             realidadAsignada.Estabilidad -= 15; // castigo
                             Console.WriteLine($"\n{rojo}[ACCESO DENEGADO]: Filtro de seguridad fallido. Posible interferencia de IRIS detectada.");
+                            Thread.Sleep(10);
                             Console.WriteLine("El sistema apenas logró extraer energía (+1 Energía).");
+                            Thread.Sleep(10);
                             Console.WriteLine($"La anomalía local aprovechó tu vulnerabilidad, provocando un colapso parcial (-15 Estabilidad).");
-
+                            Thread.Sleep(10);
                             // destruir un objeto al azar del inventario
                             if (cadete.Inventario.Count > 0)
                             {
@@ -663,8 +728,11 @@ namespace NEXUS
 
                     case 6: // Consultar estado
                         Console.WriteLine($"{blanco}[ESTADO DEL SISTEMA]{cian}");
+                        Thread.Sleep(10);
                         Console.WriteLine($"Nivel del Cadete: {verde}{cadete.Nivel}{cian}");
+                        Thread.Sleep(10);
                         Console.WriteLine($"Experiencia actual: {verde}{cadete.Experiencia}/100{cian}");
+                        Thread.Sleep(10);
                         if (realidadAsignada.Estabilidad >= 80)
                         {
                             Console.WriteLine("Evaluación de la realidad: ESTABLE. Continúa el buen trabajo.");
@@ -677,45 +745,72 @@ namespace NEXUS
 
                     case 7: // Manual del Simulador
                         Console.Clear();
-                        Console.WriteLine("=======================================================");
+                        DibujarSeparadorAnimado(cian, 55);
                         Console.WriteLine($"{blanco}         [BASE DE DATOS: MANUAL DEL EXPLORADOR]        {cian}");
-                        Console.WriteLine("=======================================================");
-
+                        DibujarSeparadorAnimado(cian, 55);
+                        
+                        Thread.Sleep(10);
                         Console.WriteLine($"\n{magenta}1. OBJETIVO DE LA SIMULACIÓN:{cian}");
+                        Thread.Sleep(10);
                         Console.WriteLine("Tu misión es adentrarte en simulaciones cuánticas inestables,");
+                        Thread.Sleep(3);
                         Console.WriteLine("sobrevivir a sus peligros y mantener la ESTABILIDAD del mundo.");
+                        Thread.Sleep(3);
                         Console.WriteLine("Al llegar a 100% de estabilidad, se te asigna una nueva misión.");
+                        Thread.Sleep(3);
                         Console.WriteLine("Si la Estabilidad cae a 20% o menos, la ANOMALÍA IRIS tomará el control.");
-
+                        
+                        Thread.Sleep(10);
                         Console.WriteLine($"\n{verde}2. ENERGÍA Y RECURSOS:{cian}");
+                        Thread.Sleep(10);
                         Console.WriteLine($"* {blanco}Energía:{cian} Necesaria para realizar acciones. Si se agota, quedarás");
+                        Thread.Sleep(3);
                         Console.WriteLine("  indefenso. Usa la opción 'Recuperar energía' para recargarla.");
+                        Thread.Sleep(3);
                         Console.WriteLine($"* {blanco}Experiencia:{cian} Sube tu Nivel de Cadete al explorar realidades.");
-
+                        
+                        Thread.Sleep(10);
                         Console.WriteLine($"\n{magenta}3. LAS 4 ANOMALÍAS:{cian}");
+                        Thread.Sleep(10);
                         Console.WriteLine("Cada mundo está corrompido por una anomalía oculta:");
+                        Thread.Sleep(3);
                         Console.WriteLine($"{blanco}TIEMPO, ESPACIO, MENTE o SILENCIO.{cian}");
                         Console.WriteLine("Usa la opción 'Observar realidad' para recibir pistas sensoriales");
+                        Thread.Sleep(3);
                         Console.WriteLine("del entorno y deducir a qué tipo de anomalía te estás enfrentando.");
+                        Thread.Sleep(3);
 
+                        Thread.Sleep(10);
                         Console.WriteLine($"\n{verde}4. INVENTARIO Y LOOT:{cian}");
+                        Thread.Sleep(10);
                         Console.WriteLine($"* {blanco}Buscar objetos:{cian} Gasta energía, pero puedes encontrar Artefactos.");
+                        Thread.Sleep(3);
                         Console.WriteLine("* Tu mochila tiene capacidad limitada. Deberás descartar objetos");
+                        Thread.Sleep(3);
                         Console.WriteLine("  si quieres recoger equipo nuevo.");
 
+                        Thread.Sleep(10);
                         Console.WriteLine($"\n{magenta}5. INTERACTUAR CON LA REALIDAD (SUPERVIVENCIA):{cian}");
+                        Thread.Sleep(10);
                         Console.WriteLine("Una vez que deduzcas qué anomalía afecta al mundo, elige un objeto");
+                        Thread.Sleep(3);
                         Console.WriteLine("de tu inventario (leyendo su descripción) e interactúa con la realidad.");
+                        Thread.Sleep(3);
                         Console.WriteLine($"* {verde}Sinergia Correcta:{cian} La Estabilidad aumenta drásticamente.");
+                        Thread.Sleep(3);
                         Console.WriteLine($"* {rojo}Elección Incorrecta:{cian} La realidad empeora y pierdes Estabilidad.");
 
-                        Console.WriteLine("\n=======================================================");
-                        Console.WriteLine($"{amarillo}FIN DEL ARCHIVO. Presiona cualquier tecla para volver al menú...{cian}");
+                        DibujarSeparadorAnimado(cian, 55);
+                        Console.WriteLine($"{amarillo}FIN DEL ARCHIVO. Presiona cualquier tecla para volver al menú.{cian}");
                         break;
 
                     case 8: // Desconexión
-                        Console.WriteLine($"{blanco}[SISTEMA NEXUS]{cian} Iniciando protocolo de desconexión...");
-                        Console.WriteLine("Guardando estado del cadete...");
+                        Console.Write($"{blanco}[SISTEMA NEXUS]{cian} Iniciando protocolo de desconexión");
+                        DibujarPuntosSuspensivos(3);
+                        Thread.Sleep(10);
+                        Console.Write("Guardando estado del cadete");
+                        DibujarPuntosSuspensivos(3);
+                        Thread.Sleep(10);
                         Console.WriteLine($"\n{verde}Desconexión exitosa. Fin de la simulación.{cian}");
                         conectado = false;
                         break;
@@ -724,38 +819,48 @@ namespace NEXUS
                         if (realidadAsignada.Estabilidad >= 100)
                         {
                             Console.Clear();
-                            Console.WriteLine("=======================================================");
+                            DibujarSeparadorAnimado(cian, 55);
                             Console.WriteLine($"{fondoVerde}{blanco}            [PROTOCOLO DE EXTRACCIÓN INICIADO]           {reset}");
-                            Console.WriteLine($"{cian}=======================================================");
+                            DibujarSeparadorAnimado(cian, 55);
 
                             Console.WriteLine($"\n{blanco}[NEXUS]{cian} Sellando fisuras cuánticas en {magenta}{realidadAsignada.Nombre}{cian}...");
+                            Thread.Sleep(10);
                             Console.WriteLine("La matriz espacial de este universo ha sido estabilizada por completo.");
+                            Thread.Sleep(10);
                             Console.WriteLine($"La anomalía de tipo {magenta}{realidadAsignada.Anomalia}{cian} ha sido purgada. Has salvado esta realidad del colapso.");
-
+                            Thread.Sleep(10);
                             // recompensa
                             cadete.Experiencia += 100;
                             Console.WriteLine($"\n{verde}[RECOMPENSA DE EXTRACCIÓN]: {blanco}+100 EXP{verde} obtenida.");
+                            Thread.Sleep(10);
                             Console.WriteLine($"Nivel actual del Cadete: {blanco}{cadete.Nivel}{verde}.{cian}");
-
+                            Thread.Sleep(100);
                             // nueva realidad
                             realidadAsignada = new Realidad();
                             Console.WriteLine($"\n{blanco}[SISTEMA NEXUS]{cian} Desconectando anclajes temporales...");
+                            Thread.Sleep(10);
                             Console.WriteLine($"Buscando un nuevo mundo al borde del colapso...");
+                            Thread.Sleep(10);
                             Console.WriteLine($"\nSincronizando nuevas coordenadas cuánticas...");
+                            Thread.Sleep(10);
                             Console.WriteLine($"Nueva realidad asignada al cadete: {magenta}{realidadAsignada.Nombre}{cian}");
+                            Thread.Sleep(10);
                             Console.WriteLine($"Nivel de amenaza inicial (Estabilidad): {verde}{realidadAsignada.Estabilidad}%{cian}");
                         }
                         else
                         {
                             // Protección por si el usuario presiona 9 cuando no debe
                             Console.WriteLine($"{rojo}ERROR DE PROTOCOLO: Extracción denegada.");
+                            Thread.Sleep(10);
                             Console.WriteLine($"Para sellar un universo se requiere un 100% de Estabilidad. (Actual: {realidadAsignada.Estabilidad}%)");
+                            Thread.Sleep(10);
                             Console.WriteLine($"Continúa purgando las anomalías del sector.{cian}");
                         }
                         break;
 
                     default: // Manejo de errores de entrada (Protocolo de seguridad)
                         Console.WriteLine($"{rojo}ERROR: Operación no reconocida.");
+                        Thread.Sleep(10);
                         Console.WriteLine($"Penalización del sistema: -5 Estabilidad.{cian}");
                         realidadAsignada.Estabilidad -= 5;
                         break;
@@ -768,24 +873,30 @@ namespace NEXUS
                     Console.WriteLine($"{fondoRojo}{blanco}----------------------------------------{reset}");
                     Console.WriteLine($"{fondoRojo}{blanco}        ALERTA DE INTERFERENCIA IRIS    {reset}");
                     Console.WriteLine($"{fondoRojo}{blanco}----------------------------------------{reset}");
+                    Thread.Sleep(15);
                     Console.WriteLine($"{rojo}La estabilidad de la realidad está alcanzando niveles críticos.");
+                    Thread.Sleep(15);
                     Console.WriteLine($"NEXUS recomienda recuperación inmediata o desconexión.");
 
                     // pausa dramática
                     Thread.Sleep(1500);
 
                     Console.WriteLine($"\n{magenta}[SISTEMA COMPROMETIDO]{rojo}");
+                    Thread.Sleep(10);
                     Console.WriteLine("IRIS: TE HE ENCONTRADO, EXPLORADOR.");
+                    Thread.Sleep(10);
                     Console.WriteLine("ESTA REALIDAD ME PERTENECE AHORA. RÍNDETE O ENFRENTA EL VACÍO.");
-
+                    Thread.Sleep(10);
                     // sacrificio de energía o perder
                     Console.Write($"\n{amarillo}NEXUS: ¿Transferir toda tu energía restante ({cadete.Energia}) para forzar un reinicio y repeler a IRIS? (S/N): {verde}");
+                    Thread.Sleep(10);
                     string decisionIris = Console.ReadLine().Trim().ToUpper();
                     Console.Write(cian);
 
                     if (decisionIris == "S")
                     {
-                        Console.WriteLine($"\n{blanco}[NEXUS]{cian} Ejecutando purga de emergencia...");
+                        Console.WriteLine($"\n{blanco}[NEXUS]{cian} Ejecutando purga de emergencia");
+                        DibujarPuntosSuspensivos(3);
                         Thread.Sleep(1000);
 
                         // reiniciar energía a cambio de estabilidad
@@ -809,10 +920,32 @@ namespace NEXUS
 
                 if (conectado)
                 {
-                    Console.WriteLine($"\n{reset}Presione cualquier tecla para continuar...");
+                    Console.Write($"\n{reset}Presione cualquier tecla para continuar");
+                    DibujarPuntosSuspensivos(3);
                     Console.ReadKey();
                 }
             }
+        }
+        static void DibujarSeparadorAnimado(string color, int largo = 40)
+        {
+            Console.Write(color);
+            for (int i = 0; i < largo; i++)
+            {
+                Console.Write("=");
+                Thread.Sleep(1);
+            }
+            Console.WriteLine();
+            Thread.Sleep(5);
+        }
+        static void DibujarPuntosSuspensivos(int largo = 5)
+        {
+            for (int i = 0; i < largo; i++)
+            {
+                Thread.Sleep(400);
+                Console.Write(".");
+            }
+            Console.WriteLine();
+            Thread.Sleep(600);
         }
     }
     class Usuario
