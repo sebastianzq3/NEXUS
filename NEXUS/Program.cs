@@ -77,8 +77,30 @@ namespace NEXUS
                 Console.WriteLine("========================================");
                 Console.WriteLine($"EXPLORADOR: {verde}{cadete.Nombre}{cian}");
                 Console.WriteLine($"REALIDAD:   {magenta}{realidadAsignada.Nombre}{cian}");
-                Console.WriteLine($"ENERGÍA:    {verde}{cadete.Energia}/{cadete.EnergiaMax}{cian}");
-                Console.WriteLine($"ESTABILIDAD:{verde}{realidadAsignada.Estabilidad}%{cian}");
+                // Barra de Energía con barritas verde
+                Console.Write($"ENERGÍA:    {verde}{cadete.Energia}/{cadete.EnergiaMax}{cian} [");
+                for (int i = 0; i<cadete.EnergiaMax; i++)
+                {
+                    if (i <= cadete.Energia) Console.Write($"{verde}█");
+                    else { Console.Write($"{gris}░"); }
+                    Console.Write(" ");
+                }
+                Console.WriteLine($"{cian}]");
+
+                // Barra de Estabilidad (Porcentaje aproximado)
+                Console.Write($"ESTABILIDAD:{verde}{realidadAsignada.Estabilidad}%{cian}  ");
+                if (realidadAsignada.Estabilidad < 100) Console.Write(" [");
+                else Console.Write("[");
+                int bloquesEstabilidad = realidadAsignada.Estabilidad / 10; // Convierte 0-100 a 0-10
+
+                for (int i = 0; i < 10; i++) // La barra siempre medirá 10 espacios de largo
+                {
+                    if (i < bloquesEstabilidad) Console.Write($"{magenta}█");
+                    else Console.Write($"{gris}░");
+
+                    Console.Write(" ");
+                }
+                Console.WriteLine($"{cian}]");
                 Console.WriteLine("========================================\n");
 
                 Console.WriteLine("========================================\n");
