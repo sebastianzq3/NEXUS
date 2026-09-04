@@ -969,11 +969,11 @@ namespace NEXUS
         private static List<(int, int)> CoordenadasOcupadas = new List<(int, int)>();
         private AtlasRealidades() { }
 
-        string reset = "\u001b[0m";
-        string colorTiempo = "\u001b[92m";   // Cuadrante 1 (Verde)
-        string colorEspacio = "\x1b[38;5;20m";  // Cuadrante 2 (Cian)
-        string colorMente = "\x1b[33m";    // Cuadrante 3 (Amarillo)
-        string colorSilencio = "\u001b[95m"; // Cuadrante 4 (Magenta)
+        static string reset = "\u001b[0m";
+        static string colorTiempo = "\u001b[92m";   // Cuadrante 1 (Verde)
+        static string colorEspacio = "\x1b[38;5;20m";  // Cuadrante 2 (Cian)
+        static string colorMente = "\x1b[33m";    // Cuadrante 3 (Amarillo)
+        static string colorSilencio = "\u001b[95m"; // Cuadrante 4 (Magenta)
 
         public static void GenerarAtlas()
         {
