@@ -1,5 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
+using System.Net;
+using System.Net.Sockets;
+using System.IO;
+using System.Runtime.InteropServices;
 
 namespace NEXUS
 {
@@ -7,7 +11,6 @@ namespace NEXUS
     {
         static void Main(string[] args)
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
             // Variables de colores en codigos ANSI
             // Variables de colores ANSI
             string reset = "\u001b[0m";
@@ -62,10 +65,11 @@ namespace NEXUS
             Realidad realidadAsignada = new Realidad();
             Console.Write($"\n{blanco}[SISTEMA NEXUS]{cian} Sincronizando coordenadas cuánticas");
             DibujarPuntosSuspensivos(3);
+            Console.WriteLine();
             Console.Write($"{blanco}[SISTEMA NEXUS]{cian} Realidad asignada al cadete: {magenta}{realidadAsignada.Nombre}{cian}");
-
-            Console.Write("\nPresiona cualquier tecla para entrar a la simulación");
-            DibujarPuntosSuspensivos(3);
+            Console.WriteLine();
+            Thread.Sleep(5);
+            Console.Write("\nPresiona cualquier tecla para entrar a la simulación.");
             Console.ReadKey();
 
             bool conectado = true;
@@ -84,7 +88,7 @@ namespace NEXUS
                 Console.Write($"ENERGÍA:    {verde}{cadete.Energia}/{cadete.EnergiaMax}{cian}");
                 if (cadete.Energia >= 10) Console.Write(" [");
                 else Console.Write("  [");
-                for (int i = 0; i<cadete.EnergiaMax; i++)
+                for (int i = 0; i < cadete.EnergiaMax; i++)
                 {
                     if (i <= cadete.Energia) Console.Write($"{verde}█");
                     else { Console.Write($"{gris}░"); }
@@ -113,20 +117,22 @@ namespace NEXUS
                 DibujarSeparadorAnimado(cian);
 
                 DibujarSeparadorAnimado(cian);
-                Console.WriteLine($"1. Observar realidad");
+                Console.WriteLine($"1.  Observar realidad");
                 Thread.Sleep(10);
-                Console.WriteLine($"2. Buscar objetos         {verde}[-3 Energía]{cian}");
+                Console.WriteLine($"2.  Buscar objetos         {verde}[-3 Energía]{cian}");
                 Thread.Sleep(10);
-                Console.WriteLine($"3. Inventario");
+                Console.WriteLine($"3.  Inventario");
                 Thread.Sleep(10);
-                Console.WriteLine($"4. Utilizar objeto        {verde}[-2 Energía]{cian}");
+                Console.WriteLine($"4.  Utilizar objeto        {verde}[-2 Energía]{cian}");
                 Thread.Sleep(10);
-                Console.WriteLine($"5. Recuperar energía      {verde}[+5 Recarga]{cian}");
-                Console.WriteLine($"6. Consultar estado");
+                Console.WriteLine($"5.  Recuperar energía      {verde}[+5 Recarga]{cian}");
+                Console.WriteLine($"6.  Consultar estado");
                 Thread.Sleep(10);
-                Console.WriteLine($"7. Manual del simulador");
+                Console.WriteLine($"7.  Manual del simulador");
                 Thread.Sleep(10);
-                Console.WriteLine($"8. Intentar desconexión");
+                Console.WriteLine($"8.  Intentar desconexión");
+                Thread.Sleep(10);
+                Console.WriteLine($"10. Atlas de Realidades");
                 Thread.Sleep(10);
                 DibujarSeparadorAnimado(cian);
 
@@ -748,7 +754,7 @@ namespace NEXUS
                         DibujarSeparadorAnimado(cian, 55);
                         Console.WriteLine($"{blanco}         [BASE DE DATOS: MANUAL DEL EXPLORADOR]        {cian}");
                         DibujarSeparadorAnimado(cian, 55);
-                        
+
                         Thread.Sleep(10);
                         Console.WriteLine($"\n{magenta}1. OBJETIVO DE LA SIMULACIÓN:{cian}");
                         Thread.Sleep(10);
@@ -759,7 +765,7 @@ namespace NEXUS
                         Console.WriteLine("Al llegar a 100% de estabilidad, se te asigna una nueva misión.");
                         Thread.Sleep(3);
                         Console.WriteLine("Si la Estabilidad cae a 20% o menos, la ANOMALÍA IRIS tomará el control.");
-                        
+
                         Thread.Sleep(10);
                         Console.WriteLine($"\n{verde}2. ENERGÍA Y RECURSOS:{cian}");
                         Thread.Sleep(10);
@@ -768,7 +774,7 @@ namespace NEXUS
                         Console.WriteLine("  indefenso. Usa la opción 'Recuperar energía' para recargarla.");
                         Thread.Sleep(3);
                         Console.WriteLine($"* {blanco}Experiencia:{cian} Sube tu Nivel de Cadete al explorar realidades.");
-                        
+
                         Thread.Sleep(10);
                         Console.WriteLine($"\n{magenta}3. LAS 4 ANOMALÍAS:{cian}");
                         Thread.Sleep(10);
@@ -846,6 +852,7 @@ namespace NEXUS
                             Console.WriteLine($"Nueva realidad asignada al cadete: {magenta}{realidadAsignada.Nombre}{cian}");
                             Thread.Sleep(10);
                             Console.WriteLine($"Nivel de amenaza inicial (Estabilidad): {verde}{realidadAsignada.Estabilidad}%{cian}");
+                            realidadAsignada.Extraida = true;
                         }
                         else
                         {
@@ -858,6 +865,13 @@ namespace NEXUS
                         }
                         break;
 
+                    case 10: // Atlas de Realidades
+                        {
+                            AtlasRealidades.GenerarAtlas();
+                            AtlasRealidades.ActualizarAtlas();
+                            AtlasRealidades.MostrarAtlas();
+                        }
+                        break;
                     default: // Manejo de errores de entrada (Protocolo de seguridad)
                         Console.WriteLine($"{rojo}ERROR: Operación no reconocida.");
                         Thread.Sleep(10);
@@ -948,6 +962,136 @@ namespace NEXUS
             Thread.Sleep(600);
         }
     }
+
+    class AtlasRealidades
+    {
+        private static string[,] Atlas = new string[18, 12];
+        private static List<(int, int)> CoordenadasOcupadas = new List<(int, int)>();
+        private AtlasRealidades() { }
+
+        string reset = "\u001b[0m";
+        string colorTiempo = "\u001b[92m";   // Cuadrante 1 (Verde)
+        string colorEspacio = "\x1b[38;5;20m";  // Cuadrante 2 (Cian)
+        string colorMente = "\x1b[33m";    // Cuadrante 3 (Amarillo)
+        string colorSilencio = "\u001b[95m"; // Cuadrante 4 (Magenta)
+
+        public static void GenerarAtlas()
+        {
+            string simbolo = "[ ]";
+
+            for (int i = 0; i < Atlas.GetLength(0); i++)
+            {
+                for (int j = 0; j < Atlas.GetLength(1); j++)
+                {
+                    // Sistema de cuadrantes
+
+                    if (i < (Atlas.GetLength(0) / 2) && j < (Atlas.GetLength(1) / 2))         // 2do cuadrante (Arriba - Izquierda)
+                    {
+                        Atlas[i, j] = $"{colorEspacio}{simbolo}{reset}";
+                    }
+                    else if (i < (Atlas.GetLength(0) / 2) && j >= (Atlas.GetLength(1) / 2))   // 1er cuadrante (Arriba - Derecha)
+                    {
+                        Atlas[i, j] = $"{colorTiempo}{simbolo}{reset}";
+                    }
+                    else if (i >= (Atlas.GetLength(0) / 2) && j < (Atlas.GetLength(1) / 2))   // 3er cuadrante (Abajo - Izquierda)
+                    {
+                        Atlas[i, j] = $"{colorMente}{simbolo}{reset}";
+                    }
+                    else                                                                      // 4to cuadrante (Abajo - Derecha)
+                    {
+                        Atlas[i, j] = $"{colorSilencio}{simbolo}{reset}";
+                    }
+                }
+            }
+        }
+        public static void ActualizarAtlas()
+        {
+            CoordenadasOcupadas.Clear();
+
+            GenerarAtlas();
+
+            Random rnd = new Random();
+
+            foreach (Realidad realidad in Realidad.ListaRealidades)
+            {
+                int mitadX = Atlas.GetLength(0) / 2;
+                int mitadY = Atlas.GetLength(1) / 2;
+
+                if (realidad.Extraida)
+                {
+                    // primera vez q se dibuja esta realidad?
+                    if (realidad.CoordenadaX == -1)
+                    {
+                        bool coordenadaValida = false;
+                        int x = 0, y = 0;
+
+                        do
+                        {
+                            // mapearla en su cuadrante apropiado
+                            switch (realidad.Anomalia)
+                            {
+                                case Anomalia.Tiempo: x = rnd.Next(0, mitadX); y = rnd.Next(mitadY, Atlas.GetLength(1)); break;
+                                case Anomalia.Espacio: x = rnd.Next(0, mitadX); y = rnd.Next(0, mitadY); break;
+                                case Anomalia.Mente: x = rnd.Next(mitadX, Atlas.GetLength(0)); y = rnd.Next(0, mitadY); break;
+                                case Anomalia.Silencio: x = rnd.Next(mitadX, Atlas.GetLength(0)); y = rnd.Next(mitadY, Atlas.GetLength(1)); break;
+                            }
+
+                            if (!CoordenadasOcupadas.Contains((x, y)))
+                            {
+                                coordenadaValida = true;
+                                // para el siguiente dibujado guardamos las coords de la realidad dentro del objeto
+                                realidad.CoordenadaX = x;
+                                realidad.CoordenadaY = y;
+                            }
+                        } while (!coordenadaValida);
+                    }
+
+                    CoordenadasOcupadas.Add((realidad.CoordenadaX, realidad.CoordenadaY));
+
+                    // dibujado
+                    string blanco = "\u001b[97m";
+                    Atlas[realidad.CoordenadaX, realidad.CoordenadaY] = $"{blanco}[*]";
+                }
+                else
+                {
+                    // signos de interrogación aleatorios por cada dibujado
+                    for (int i = 0; i < 4; i++)
+                    {
+                        bool coordenadaValida = false;
+                        int x = 0, y = 0;
+
+                        do
+                        {
+                            if (i == 1) { x = rnd.Next(0, mitadX); y = rnd.Next(0, mitadY); }
+                            else if (i == 0) { x = rnd.Next(0, mitadX); y = rnd.Next(mitadY, Atlas.GetLength(1)); }
+                            else if (i == 2) { x = rnd.Next(mitadX, Atlas.GetLength(0)); y = rnd.Next(0, mitadY); }
+                            else { x = rnd.Next(mitadX, Atlas.GetLength(0)); y = rnd.Next(mitadY, Atlas.GetLength(1)); }
+
+                            if (!CoordenadasOcupadas.Contains((x, y)))
+                            {
+                                coordenadaValida = true;
+                                CoordenadasOcupadas.Add((x, y)); // Solo se ocupa durante este redibujado
+                            }
+                        } while (!coordenadaValida);
+
+                        string gris = "\u001b[90m";
+                        Atlas[x, y] = $"{gris}[?]";
+                    }
+                }
+            }
+        }
+        public static void MostrarAtlas()
+        {
+            for (int i = 0; i < Atlas.GetLength(0); i++)
+            {
+                for (int j = 0; j < Atlas.GetLength(1); j++)
+                {
+                    Console.Write(Atlas[i, j]);
+                }
+                Console.WriteLine();
+            }
+        }
+    }
     class Usuario
     {
         public string Nombre { get; private set; }
@@ -1035,6 +1179,8 @@ namespace NEXUS
     }
     class Realidad
     {
+        public static List<Realidad> ListaRealidades { get; private set; } = new List<Realidad>();
+
         private static string[] nombresMundos = new string[]
         {
             "Abismo", "Nether", "Limbo", "Horizonte", "Vacío", "Cosmos", "Nexo", "Núcleo", "Dominio", "Sector",
@@ -1075,12 +1221,21 @@ namespace NEXUS
             }
         }
         public Anomalia Anomalia { get; private set; }
+        public bool Extraida { get; set; }
+        public bool Cartografiada { get; set; }
+        public int CoordenadaX { get; set; }
+        public int CoordenadaY { get; set; }
         public Realidad()
         {
             Random rndRealidad = new Random();
             this.Nombre = $"{nombresMundos[rndRealidad.Next(nombresMundos.Length)]} {adjetivos[rndRealidad.Next(adjetivos.Length)]}";
             this.Estabilidad = rndRealidad.Next(30, 70);
             this.Anomalia = (Anomalia)rndRealidad.Next(0, 4);
+            ListaRealidades.Add(this);
+            Extraida = false;
+            Cartografiada = false;
+            CoordenadaX = -1;
+            CoordenadaY = -1;
         }
     }
     class Objeto
