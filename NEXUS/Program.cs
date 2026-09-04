@@ -66,10 +66,11 @@ namespace NEXUS
             Console.Write($"\n{blanco}[SISTEMA NEXUS]{cian} Sincronizando coordenadas cuánticas");
             DibujarPuntosSuspensivos(3);
             Console.WriteLine();
+            Thread.Sleep(10);
             Console.Write($"{blanco}[SISTEMA NEXUS]{cian} Realidad asignada al cadete: {magenta}{realidadAsignada.Nombre}{cian}");
             Console.WriteLine();
-            Thread.Sleep(5);
-            Console.Write("\nPresiona cualquier tecla para entrar a la simulación.");
+            Thread.Sleep(10);
+            Console.Write("\nPresiona cualquier tecla para entrar a la simulación");
             Console.ReadKey();
 
             bool conectado = true;
@@ -866,13 +867,87 @@ namespace NEXUS
                         break;
 
                     case 10: // Atlas de Realidades
+                        bool inspeccionando = true;
+                        while (inspeccionando)
                         {
+                            Console.Clear();
                             AtlasRealidades.GenerarAtlas();
                             AtlasRealidades.ActualizarAtlas();
                             AtlasRealidades.MostrarAtlas();
+
+                            Console.WriteLine($"{blanco}[SISTEMA DE ESCANEO]{cian}");
+                            Console.Write("Ingresa las coordenadas (Fila Columna) o '0' para salir: ");
+
+                            Console.Write(verde);
+                            string inputScan = Console.ReadLine().Trim();
+                            Console.Write(cian);
+
+                            if (inputScan == "0")
+                            {
+                                inspeccionando = false;
+                                Console.Write("Cerrando Atlas");
+                                DibujarPuntosSuspensivos(3);
+                                Thread.Sleep(500);
+                                continue; // Sale del while y vuelve al menú principal
+                            }
+
+                            // separadores y descartar entradas vacías
+                            string[] partes = inputScan.Split(new char[] { ' ', ',', ':', '.' }, StringSplitOptions.RemoveEmptyEntries);
+
+                            if (partes.Length == 2 && 
+                                int.TryParse(partes[0], out int fila) && 
+                                int.TryParse(partes[1], out int columna))
+                            {
+                                // validación dentro de límites del atlas
+                                if (fila >= 0 && fila < AtlasRealidades.alto && columna >= 0 && columna < AtlasRealidades.ancho)
+                                {
+                                    bool realidadEncontrada = false;
+
+                                    // 1. Buscamos si hay un mundo salvado en esas coordenadas
+                                    foreach (Realidad r in Realidad.ListaRealidades)
+                                    {
+                                        if (r.Extraida && r.CoordenadaX == fila && r.CoordenadaY == columna)
+                                        {
+                                            Console.WriteLine($"\n{blanco}--- REGISTRO DE REALIDAD ---{cian}");
+                                            Console.WriteLine($"Mundo:     {magenta}{r.Nombre}{cian}");
+                                            Console.WriteLine($"Anomalía:  {blanco}{r.Anomalia}{cian} (Purgada)");
+                                            Console.WriteLine($"Estado:    {verde}ESTABLE{cian}");
+                                            Console.WriteLine($"{blanco}----------------------------{cian}");
+                                            realidadEncontrada = true;
+                                            break;
+                                        }
+                                    }
+
+                                    // si no es un mundo salvado, leemos la matriz para ver qué hay ahí
+                                    if (!realidadEncontrada)
+                                    {
+                                        string celda = AtlasRealidades.ObtenerCelda(fila, columna);
+
+                                        if (celda.Contains("[?]"))
+                                        {
+                                            Console.WriteLine($"\n{amarillo}[ALERTA]: Ecos de anomalía inestable detectados. Imposible decodificar datos hasta su extracción.{cian}");
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine($"\n{gris}[INFO]: Sector cuántico vacío. Solo estática de fondo.{cian}");
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"\n{rojo}ERROR: Coordenadas fuera del rango del radar.{cian}");
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine($"\n{rojo}ERROR: Formato incorrecto. Usa dos números separados por un espacio (Ej: 05 12).{cian}");
+                            }
+
+                            Console.Write("\nPresiona cualquier tecla para continuar escaneando...");
+                            Console.ReadKey();
                         }
                         break;
-                    default: // Manejo de errores de entrada (Protocolo de seguridad)
+                    default: // manejo de errores
                         Console.WriteLine($"{rojo}ERROR: Operación no reconocida.");
                         Thread.Sleep(10);
                         Console.WriteLine($"Penalización del sistema: -5 Estabilidad.{cian}");
@@ -965,7 +1040,9 @@ namespace NEXUS
 
     class AtlasRealidades
     {
-        private static string[,] Atlas = new string[18, 12];
+        public static int alto { get; private set; } = 18;
+        public static int ancho { get; private set; } = 12;
+        private static string[,] Atlas = new string[alto, ancho];
         private static List<(int, int)> CoordenadasOcupadas = new List<(int, int)>();
         private AtlasRealidades() { }
 
@@ -974,6 +1051,8 @@ namespace NEXUS
         static string colorEspacio = "\x1b[38;5;20m";  // Cuadrante 2 (Cian)
         static string colorMente = "\x1b[33m";    // Cuadrante 3 (Amarillo)
         static string colorSilencio = "\u001b[95m"; // Cuadrante 4 (Magenta)
+        static string colorCoords = "\u001b[96m";
+        static string gris = "\u001b[90m";
 
         public static void GenerarAtlas()
         {
@@ -1074,7 +1153,6 @@ namespace NEXUS
                             }
                         } while (!coordenadaValida);
 
-                        string gris = "\u001b[90m";
                         Atlas[x, y] = $"{gris}[?]";
                     }
                 }
@@ -1082,14 +1160,79 @@ namespace NEXUS
         }
         public static void MostrarAtlas()
         {
+            // ENCABEZADO (columnas)
+            Console.Write("      ");
+            for (int j = 0; j < Atlas.GetLength(1); j++)
+            {
+                Console.Write($"{colorCoords}{j:D2} {reset}");
+            }
+            Console.WriteLine();
+
+            // BORDE SUPERIOR
+            Console.Write("   ");
+                                  // Empezamos en -1 y terminamos en 20 para cubrir las esquinas
+            for (int j = -1; j <= Atlas.GetLength(1); j++)
+            {
+                // si está en la mitad izquierda es Espacio (Cuadrante 2), si no es Tiempo (Cuadrante 1)
+                string colorActual = (j < Atlas.GetLength(1) / 2) ? colorEspacio : colorTiempo;
+
+                // espacios fijos en posiciones específicas
+                if (j == 2 || j == 7 || j == 13 || j == 17)
+                    Console.Write("   ");
+                else
+                    Console.Write($"{colorActual}[ ]{reset}");
+            }
+            Console.WriteLine();
+
+            // CONTENIDO DEL MAPA CON BORDES LATERALES
             for (int i = 0; i < Atlas.GetLength(0); i++)
             {
+                // Número de Fila
+                Console.Write($"{colorCoords}{i:D2} {reset}");
+
+                // Borde Izquierdo (Cuadrante 2 arriba, Cuadrante 3 abajo)
+                string colorIzq = (i < Atlas.GetLength(0) / 2) ? colorEspacio : colorMente;
+                if (i == 3 || i == 8 || i == 12 || i == 16) // espacios fijos
+                    Console.Write("   ");
+                else
+                    Console.Write($"{colorIzq}[ ]{reset}");
+
+                // Dibujar la matriz central
                 for (int j = 0; j < Atlas.GetLength(1); j++)
                 {
                     Console.Write(Atlas[i, j]);
                 }
+
+                // Borde Derecho (Cuadrante 1 arriba, Cuadrante 4 abajo)
+                string colorDer = (i < Atlas.GetLength(0) / 2) ? colorTiempo : colorSilencio;
+                if (i == 1 || i == 6 || i == 14 || i == 18) // espacios fijos
+                    Console.Write("   ");
+                else
+                    Console.Write($"{colorDer}[ ]{reset}");
+
                 Console.WriteLine();
             }
+
+            // BORDE INFERIOR IRREGULAR Y COLOREADO
+            Console.Write("   ");
+            for (int j = -1; j <= Atlas.GetLength(1); j++)
+            {
+                // en la mitad izquierda es Mente (Cuadrante 3), si no es Silencio (Cuadrante 4)
+                string colorActual = (j < Atlas.GetLength(1) / 2) ? colorMente : colorSilencio;
+
+                // espacios fijos
+                if (j == 1 || j == 5 || j == 12 || j == 18)
+                    Console.Write("   ");
+                else
+                    Console.Write($"{colorActual}[ ]{reset}");
+            }
+            Console.WriteLine();
+            // LEYENDA VISUAL
+            Console.WriteLine($"\n   {colorTiempo}■ TIEMPO   {colorEspacio}■ ESPACIO   {colorMente}■ MENTE   {colorSilencio}■ SILENCIO   \u001b[90m[?] INESTABLE   \u001b[97m[*] EXTRAÍDA{reset}\n");
+        }
+        public static string ObtenerCelda(int fila, int columna)
+        {
+            return Atlas[fila, columna];
         }
     }
     class Usuario
