@@ -32,7 +32,7 @@ namespace NEXUS
             // NOMBRE
             Console.WriteLine($"{cian}Ingresa tu nombre:{reset}");
             Console.Write(verde);
-            string nombreIngresado = Console.ReadLine();
+            string nombreIngresado = Console.ReadLine() ?? "";
 
             // Validación nombre
             while (string.IsNullOrWhiteSpace(nombreIngresado))
@@ -41,7 +41,7 @@ namespace NEXUS
                 Console.Clear();
                 Console.WriteLine($"{rojo}Error: El nombre no puede estar vacío. Intenta de nuevo:{reset}");
                 Console.Write(verde);
-                nombreIngresado = Console.ReadLine();
+                nombreIngresado = Console.ReadLine() ?? "";
             }
 
             // EDAD
@@ -147,7 +147,7 @@ namespace NEXUS
                 Console.Write("\nSeleccione una operación: ");
 
                 Console.Write(verde);
-                string opcionStr = Console.ReadLine();
+                string opcionStr = Console.ReadLine() ?? "";
                 Console.Write(cian);
 
                 // Validación de entrada
@@ -376,7 +376,7 @@ namespace NEXUS
                             Console.Write($"\n{cian}Selecciona el número del objeto para inspeccionarlo (o presiona '0' para cancelar): ");
                             Thread.Sleep(10);
                             Console.Write(verde);
-                            string inputInventario = Console.ReadLine();
+                            string inputInventario = Console.ReadLine() ?? "";
                             Console.Write(cian);
 
                             // 3. Validar la entrada y mostrar los detalles
@@ -401,7 +401,7 @@ namespace NEXUS
                                     Console.Write($"\n¿Deseas descartar {magenta}{objetoSeleccionado.Nombre}{cian} para liberar espacio? (S/N): ");
 
                                     Console.Write(verde);
-                                    string opcionDescartar = Console.ReadLine().Trim().ToUpper();
+                                    string opcionDescartar = (Console.ReadLine() ?? "").Trim().ToUpper();
                                     Console.Write(cian);
 
                                     if (opcionDescartar == "S")
@@ -455,7 +455,7 @@ namespace NEXUS
 
                         Console.Write("\nIngresa el número del objeto a utilizar (o '0' para cancelar): ");
                         Console.Write(verde);
-                        string inputUso = Console.ReadLine();
+                        string inputUso = Console.ReadLine() ?? "";
                         Console.Write(cian);
 
                         // validación
@@ -579,7 +579,7 @@ namespace NEXUS
 
                                 Console.Write("\nRespuesta: ");
                                 Console.Write(verde);
-                                string inputLore = Console.ReadLine().Trim().ToLower();
+                                string inputLore = (Console.ReadLine() ?? "").Trim().ToLower();
                                 Console.Write(cian);
 
                                 if (inputLore == respuestasLore[indexLore]) minijuegoGanado = true;
@@ -605,7 +605,7 @@ namespace NEXUS
 
                                 Console.Write("\nIngresa el número faltante: ");
                                 Console.Write(verde);
-                                string inputSec = Console.ReadLine().Trim();
+                                string inputSec = (Console.ReadLine() ?? "").Trim();
                                 Console.Write(cian);
 
                                 if (inputSec == respuestasSecuencias[indexSec]) minijuegoGanado = true;
@@ -642,7 +642,7 @@ namespace NEXUS
                                 Thread.Sleep(10);
                                 Console.Write("\nIntroduce la secuencia exacta (con guiones si los tenía): ");
                                 Console.Write(verde);
-                                string inputMem = Console.ReadLine().Trim().ToUpper();
+                                string inputMem = (Console.ReadLine() ?? "").Trim().ToUpper();
                                 Console.Write(cian);
 
                                 if (inputMem == codigosMemoria[indexMem]) minijuegoGanado = true;
@@ -677,7 +677,7 @@ namespace NEXUS
 
                                 Console.Write("\nIngresa la palabra correcta: ");
                                 Console.Write(verde);
-                                string inputAna = Console.ReadLine().Trim().ToLower();
+                                string inputAna = (Console.ReadLine() ?? "").Trim().ToLower();
                                 Console.Write(cian);
 
                                 if (inputAna == respuestasAnagramas[indexAna]) minijuegoGanado = true;
@@ -879,7 +879,7 @@ namespace NEXUS
                             Console.Write("Ingresa las coordenadas (Fila Columna) o '0' para salir: ");
 
                             Console.Write(verde);
-                            string inputScan = Console.ReadLine().Trim();
+                            string inputScan = (Console.ReadLine() ?? "").Trim();
                             Console.Write(cian);
 
                             if (inputScan == "0")
@@ -979,7 +979,7 @@ namespace NEXUS
                     // sacrificio de energía o perder
                     Console.Write($"\n{amarillo}NEXUS: ¿Transferir toda tu energía restante ({cadete.Energia}) para forzar un reinicio y repeler a IRIS? (S/N): {verde}");
                     Thread.Sleep(10);
-                    string decisionIris = Console.ReadLine().Trim().ToUpper();
+                    string decisionIris = (Console.ReadLine() ?? "").Trim().ToUpper();
                     Console.Write(cian);
 
                     if (decisionIris == "S")
