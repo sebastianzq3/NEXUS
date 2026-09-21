@@ -9,8 +9,27 @@ namespace NEXUS
 {
     internal class Program
     {
+        // --- INYECTOR DE CONSOLA DE WINDOWS ---
+        private const int STD_OUTPUT_HANDLE = -11;
+        private const int ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004;
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetStdHandle(int nStdHandle);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetConsoleMode(IntPtr hConsoleHandle, out int lpMode);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetConsoleMode(IntPtr hConsoleHandle, int dwMode);
+        // --------------------------------------
+
         static void Main(string[] args)
         {
+            // Forzar a Windows a aceptar códigos ANSI
+            IntPtr handle = GetStdHandle(STD_OUTPUT_HANDLE);
+            GetConsoleMode(handle, out int mode);
+            SetConsoleMode(handle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+
             // Variables de colores en codigos ANSI
             // Variables de colores ANSI
             string reset = "\u001b[0m";
@@ -72,6 +91,14 @@ namespace NEXUS
             Thread.Sleep(10);
             Console.Write("\nPresiona cualquier tecla para entrar a la simulación");
             Console.ReadKey();
+
+            // Creamos una cola con dos fragmentos del virus IRIS
+            Queue<EntidadIris> enjambreIris = new Queue<EntidadIris>();
+            enjambreIris.Enqueue(new EntidadIris("Cazador-Alfa"));
+            enjambreIris.Enqueue(new EntidadIris("Purificador-Omega"));
+
+            // Obtenemos el primer virus de la cola para que nos persiga
+            EntidadIris irisActual = enjambreIris.Peek();
 
             bool conectado = true;
 
@@ -955,57 +982,12 @@ namespace NEXUS
                         break;
                 }
 
-                // EVENTO DE EMERGENCIA: ANOMALÍA IRIS
-                if (conectado && realidadAsignada.Estabilidad <= 20)
-                {
-                    Console.Clear();
-                    Console.WriteLine($"{fondoRojo}{blanco}----------------------------------------{reset}");
-                    Console.WriteLine($"{fondoRojo}{blanco}        ALERTA DE INTERFERENCIA IRIS    {reset}");
-                    Console.WriteLine($"{fondoRojo}{blanco}----------------------------------------{reset}");
-                    Thread.Sleep(15);
-                    Console.WriteLine($"{rojo}La estabilidad de la realidad está alcanzando niveles críticos.");
-                    Thread.Sleep(15);
-                    Console.WriteLine($"NEXUS recomienda recuperación inmediata o desconexión.");
+                // --- TURNO DE IRIS ---
+                // Le pedimos al objeto que escanee el entorno de forma pasiva
+                irisActual.EscanearVulnerabilidad(realidadAsignada);
 
-                    // pausa dramática
-                    Thread.Sleep(1500);
-
-                    Console.WriteLine($"\n{magenta}[SISTEMA COMPROMETIDO]{rojo}");
-                    Thread.Sleep(10);
-                    Console.WriteLine("IRIS: TE HE ENCONTRADO, EXPLORADOR.");
-                    Thread.Sleep(10);
-                    Console.WriteLine("ESTA REALIDAD ME PERTENECE AHORA. RÍNDETE O ENFRENTA EL VACÍO.");
-                    Thread.Sleep(10);
-                    // sacrificio de energía o perder
-                    Console.Write($"\n{amarillo}NEXUS: ¿Transferir toda tu energía restante ({cadete.Energia}) para forzar un reinicio y repeler a IRIS? (S/N): {verde}");
-                    Thread.Sleep(10);
-                    string decisionIris = (Console.ReadLine() ?? "").Trim().ToUpper();
-                    Console.Write(cian);
-
-                    if (decisionIris == "S")
-                    {
-                        Console.WriteLine($"\n{blanco}[NEXUS]{cian} Ejecutando purga de emergencia");
-                        DibujarPuntosSuspensivos(3);
-                        Thread.Sleep(1000);
-
-                        // reiniciar energía a cambio de estabilidad
-                        cadete.Energia = 0;
-                        realidadAsignada.Estabilidad += 15;
-
-                        Console.WriteLine($"{verde}Purga exitosa. IRIS repelida temporalmente.");
-                        Console.WriteLine($"Energía agotada por completo. Estabilidad restaurada levemente (+15).{cian}");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"\n{magenta}IRIS: {rojo}ENTONCES DESAPARECE EN LA NADA.");
-                        Thread.Sleep(1000);
-
-                        // perder juego
-                        Console.WriteLine($"{blanco}[SISTEMA NEXUS]{rojo} Conexión cortada remotamente.");
-                        Console.WriteLine($"Simulación abortada por falla de seguridad.{reset}");
-                        conectado = false;
-                    }
-                }
+                // Le damos la autoridad de atacar y modificar la variable "conectado" si estamos vulnerables
+                irisActual.Asimilar(cadete, realidadAsignada, ref conectado);
 
                 if (conectado)
                 {
@@ -1319,6 +1301,115 @@ namespace NEXUS
         Mente,  //2
         Silencio//3
 
+    }
+    public enum EstadoIris
+    {
+        Dormida,
+        Acechando,
+        InvasionCritica
+    }
+    class EntidadIris
+    {
+        public string NombreFragmento { get; private set; }
+        public EstadoIris EstadoActual { get; private set; }
+        public int NivelAmenaza { get; private set; }
+        public int VecesRepelida { get; private set; }
+
+        public EntidadIris(string designacion)
+        {
+            NombreFragmento = $"I.R.I.S. [{designacion}]";
+            EstadoActual = EstadoIris.Dormida;
+            NivelAmenaza = 0;
+            VecesRepelida = 0;
+        }
+
+        // --- MÉTODOS (Lo que puede hacer) ---
+
+        // 1. Capacidad de observar la realidad de forma pasiva
+        public void EscanearVulnerabilidad(Realidad realidadActual)
+        {
+            if (realidadActual.Estabilidad > 50)
+            {
+                EstadoActual = EstadoIris.Dormida;
+                NivelAmenaza = 0;
+            }
+            else if (realidadActual.Estabilidad > 20 && realidadActual.Estabilidad <= 50)
+            {
+                EstadoActual = EstadoIris.Acechando;
+                NivelAmenaza = 50;
+
+                // Efecto narrativo: Un 30% de probabilidad de asustar al jugador si está inestable
+                Random rnd = new Random();
+                if (rnd.Next(0, 100) < 30)
+                {
+                    Console.WriteLine($"\n\u001b[93m[ALERTA DE RED]: El fragmento {NombreFragmento} te está observando desde las sombras...\u001b[96m");
+                    Thread.Sleep(800);
+                }
+            }
+            else if (realidadActual.Estabilidad <= 20)
+            {
+                EstadoActual = EstadoIris.InvasionCritica;
+                NivelAmenaza = 100;
+            }
+        }
+
+        // 2. Capacidad de atacar directamente al sistema y al Cadete
+        // Usamos 'ref bool conectado' para que IRIS tenga el poder de apagar el juego (cortar el while del Main)
+        public void Asimilar(Usuario cadete, Realidad realidadActual, ref bool conectado)
+        {
+            if (EstadoActual != EstadoIris.InvasionCritica) return;
+
+            string reset = "\u001b[0m";
+            string rojo = "\u001b[91m";
+            string amarillo = "\u001b[93m";
+            string magenta = "\u001b[95m";
+            string blanco = "\u001b[97m";
+            string verde = "\u001b[92m";
+            string fondoRojo = "\u001b[41m";
+            string cian = "\u001b[96m";
+
+            Console.Clear();
+            Console.WriteLine($"{fondoRojo}{blanco}----------------------------------------{reset}");
+            Console.WriteLine($"{fondoRojo}{blanco}        ALERTA DE INTERFERENCIA         {reset}");
+            Console.WriteLine($"{fondoRojo}{blanco}----------------------------------------{reset}");
+            Thread.Sleep(15);
+            Console.WriteLine($"{rojo}La estabilidad ha colapsado. Detección inminente.");
+            Thread.Sleep(1500);
+
+            Console.WriteLine($"\n{magenta}[SISTEMA COMPROMETIDO]{rojo}");
+            Thread.Sleep(10);
+            Console.WriteLine($"{NombreFragmento}: TE HE ENCONTRADO, EXPLORADOR.");
+            Thread.Sleep(10);
+            Console.WriteLine("ESTA REALIDAD ME PERTENECE AHORA. RÍNDETE O ENFRENTA EL VACÍO.");
+            Thread.Sleep(10);
+
+            Console.Write($"\n{amarillo}NEXUS: ¿Transferir toda tu energía ({cadete.Energia}) para forzar un reinicio y repeler a {NombreFragmento}? (S/N): {verde}");
+            string decisionIris = (Console.ReadLine() ?? "").Trim().ToUpper();
+            Console.Write(cian);
+
+            if (decisionIris == "S")
+            {
+                Console.WriteLine($"\n{blanco}[NEXUS]{cian} Ejecutando purga de emergencia...");
+                Thread.Sleep(1000);
+
+                cadete.Energia = 0; // Castigo
+                realidadActual.Estabilidad += 15; // Recompensa por sobrevivir
+                VecesRepelida++;
+                EstadoActual = EstadoIris.Acechando;
+
+                Console.WriteLine($"{verde}Purga exitosa. {NombreFragmento} repelido temporalmente.");
+                Console.WriteLine($"Energía agotada por completo. Estabilidad restaurada levemente (+15).{cian}");
+            }
+            else
+            {
+                Console.WriteLine($"\n{magenta}{NombreFragmento}: {rojo}ENTONCES DESAPARECE EN LA NADA.");
+                Thread.Sleep(1000);
+
+                Console.WriteLine($"{blanco}[SISTEMA NEXUS]{rojo} Conexión cortada remotamente.");
+                Console.WriteLine($"Simulación abortada por falla de seguridad.{reset}");
+                conectado = false; // ESTO CORTA EL BUCLE WHILE
+            }
+        }
     }
     class Realidad
     {
