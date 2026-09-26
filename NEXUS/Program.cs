@@ -45,8 +45,14 @@ namespace NEXUS
             string fondoRojo = "\u001b[41m";
             string fondoVerde = "\u001b[42m";
 
+            // Establecer tamaño fijo
+            Console.SetWindowSize(85,30);
+            Console.SetBufferSize(85,30);
+
 
             // Nombre, edad, realidad asignada, nivel de energía, nivel
+
+            MostrarPortadaAnimada(cian, cian, blanco);
 
             // NOMBRE
             Console.WriteLine($"{cian}Ingresa tu nombre:{reset}");
@@ -1018,6 +1024,94 @@ namespace NEXUS
             Console.WriteLine();
             Thread.Sleep(600);
         }
+        static void MostrarPortadaAnimada(string colorTexto, string colorBorde, string colorBloques)
+        {
+            Console.Clear();
+            Console.CursorVisible = false; // Ocultar el cursor titilante para que se vea limpio
+
+            // Arte ASCII grande para la palabra NEXUS
+            string[] nexusArt = {
+            @"███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗",
+            @"████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝",
+            @"██╔██╗ ██║█████╗   ╚███╔╝ ██║   ██║███████╗",
+            @"██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║",
+            @"██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║",
+            @"╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝"
+            };
+
+            int startX = 32; // Posición horizontal del texto
+            int startY = 11;  // Posición vertical del texto
+            string reset = "\u001b[0m";
+
+            // 1. Dibujar el texto fijo en el centro
+            for (int i = 0; i < nexusArt.Length; i++)
+            {
+                Console.SetCursorPosition(startX, startY + i);
+                Console.Write($"{colorTexto}{nexusArt[i]}{reset}");
+            }
+
+            // 2. Calcular las medidas del marco exterior
+            int boxX = startX - 4;
+            int boxY = startY - 2;
+            int boxWidth = 55;
+            int boxHeight = 10;
+
+            // 3. Crear una lista de coordenadas (el "camino" del marco en sentido horario)
+            List<(int x, int y)> caminoBorde = new List<(int x, int y)>();
+
+            // Borde superior (De izquierda a derecha)
+            for (int x = boxX; x <= boxX + boxWidth; x++) caminoBorde.Add((x, boxY));
+            // Borde derecho (De arriba hacia abajo)
+            for (int y = boxY + 1; y <= boxY + boxHeight; y++) caminoBorde.Add((boxX + boxWidth, y));
+            // Borde inferior (De derecha a izquierda)
+            for (int x = boxX + boxWidth - 1; x >= boxX; x--) caminoBorde.Add((x, boxY + boxHeight));
+            // Borde izquierdo (De abajo hacia arriba)
+            for (int y = boxY + boxHeight - 1; y > boxY; y--) caminoBorde.Add((boxX, y));
+
+            // 4. Animación de los bloques de carga
+            int longitudBloques = 3; // Son 3 bloques según tu imagen
+            for (int i = 0; i < caminoBorde.Count + longitudBloques; i++)
+            {
+                // Dibujar el bloque líder (cabeza)
+                if (i < caminoBorde.Count)
+                {
+                    Console.SetCursorPosition(caminoBorde[i].x, caminoBorde[i].y);
+                    Console.Write($"{colorBloques}█{reset}");
+                }
+
+                // Reemplazar la "cola" por el carácter de borde normal (dejando un marco dibujado atrás)
+                int indiceCola = i - longitudBloques;
+                if (indiceCola >= 0 && indiceCola < caminoBorde.Count)
+                {
+                    Console.SetCursorPosition(caminoBorde[indiceCola].x, caminoBorde[indiceCola].y);
+
+                    char caracterBorde = ' ';
+                    // Averiguar si es esquina o línea recta
+                    if (caminoBorde[indiceCola].y == boxY && caminoBorde[indiceCola].x == boxX) caracterBorde = '╔';
+                    else if (caminoBorde[indiceCola].y == boxY && caminoBorde[indiceCola].x == boxX + boxWidth) caracterBorde = '╗';
+                    else if (caminoBorde[indiceCola].y == boxY + boxHeight && caminoBorde[indiceCola].x == boxX) caracterBorde = '╚';
+                    else if (caminoBorde[indiceCola].y == boxY + boxHeight && caminoBorde[indiceCola].x == boxX + boxWidth) caracterBorde = '╝';
+                    else if (caminoBorde[indiceCola].y == boxY || caminoBorde[indiceCola].y == boxY + boxHeight) caracterBorde = '═';
+                    else caracterBorde = '║';
+
+                    Console.Write($"{colorBorde}{caracterBorde}{reset}");
+                }
+
+                Thread.Sleep(15); // Velocidad de la animación (menor = más rápido)
+            }
+
+            // Final de la presentación
+            string mensaje = "Presiona cualquier tecla para iniciar el enlace";
+            Console.SetCursorPosition((85 - mensaje.Length) / 2, startY + nexusArt.Length + 4); // Centrado matemático exacto
+            Console.Write($"\u001b[90m{mensaje}{reset}");
+
+            Console.ReadKey(true);
+            Console.CursorVisible = true;
+
+            // Forzamos la limpieza del buffer fantasma
+            Console.SetCursorPosition(0, 0);
+            Console.Clear();
+        }
     }
 
     class AtlasRealidades
@@ -1216,6 +1310,7 @@ namespace NEXUS
         {
             return Atlas[fila, columna];
         }
+        
     }
     class Usuario
     {
