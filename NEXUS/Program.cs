@@ -5,6 +5,8 @@ using System.Net.Sockets;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace NEXUS
 {
@@ -63,117 +65,132 @@ namespace NEXUS
             MostrarPortadaAnimada();
 
             // ----------------------------------------------------
-            // FASE 1: INGRESO DE NOMBRE (Con interfaz persistente)
+            // GESTIÓN DE PERFILES Y GUARDADO (SISTEMA MULTI-SLOT)
             // ----------------------------------------------------
-            string nombreIngresado = "";
-            bool errorNombre = false;
-            while (true)
+            string directorioSaves = "Saves";
+            if (!Directory.Exists(directorioSaves)) Directory.CreateDirectory(directorioSaves);
+
+            Usuario cadete = null;
+            Realidad realidadAsignada = null;
+            string rutaGuardadoActual = "";
+
+            bool perfilSeleccionado = false;
+            while (!perfilSeleccionado)
             {
                 Console.Clear();
-                DibujarSeparadorAnimado(cian, 85);
-                Console.WriteLine($"{blanco}  [ TERMINAL DE ENTRADA NEXUS - FASE DE IDENTIFICACIÓN ]{reset}");
-                DibujarSeparadorAnimado(cian, 85);
-                Console.WriteLine();
+                string msgInicio = $"{blanco}1. Cargar perfil existente\n2. Registrar nuevo explorador\n3. Purgar registro (Borrar){cian}";
+                DibujarPanelInfo("SISTEMA DE ANCLAJE MULTIVERSAL", msgInicio, cianBorde, blanco);
+                Console.Write($"  {cianBorde}╭─[ {cian}OPCIÓN{cianBorde} ]\n  ╰─> {verde}");
+                string opcInicio = Console.ReadLine() ?? "";
 
-                if (errorNombre)
+                string[] archivos = Directory.GetFiles(directorioSaves, "*.json");
+
+                if (opcInicio == "1" || opcInicio == "3")
                 {
-                    EfectoMecanografia(" [ERROR] La designación no puede estar vacía.\n\n", rojo, 15);
+                    if (archivos.Length == 0)
+                    {
+                        Console.Clear();
+                        DibujarPanelInfo("ERROR", $"{amarillo}No hay perfiles registrados en la base de datos.{cian}", amarillo, blanco);
+                        Console.Write($"\n  {gris}>>> Presiona una tecla para volver <<<"); Console.ReadKey();
+                        continue;
+                    }
+
+                    Console.Clear();
+                    string listaMsg = $"{blanco}=== REGISTROS DE EXPLORADORES ===\n\n";
+                    List<DatosPartida> partidas = new List<DatosPartida>();
+
+                    for (int i = 0; i < archivos.Length; i++)
+                    {
+                        try
+                        {
+                            DatosPartida dp = JsonSerializer.Deserialize<DatosPartida>(File.ReadAllText(archivos[i]));
+                            partidas.Add(dp);
+                            listaMsg += $"{blanco}{i + 1}. {verde}{dp.Jugador.Nombre,-12} {gris}| Edad: {dp.Jugador.Edad,2} | Nivel: {dp.Jugador.Nivel,2}\n";
+                        }
+                        catch
+                        {
+                            listaMsg += $"{rojo}{i + 1}. [ARCHIVO CORRUPTO: {Path.GetFileName(archivos[i])}]\n";
+                            partidas.Add(null);
+                        }
+                    }
+
+                    if (opcInicio == "1") // CARGAR
+                    {
+                        DibujarPanelInfo("SELECCIÓN DE PERFIL", listaMsg.TrimEnd('\n'), cianBorde, blanco);
+                        Console.Write($"\n  {cianBorde}╭─[ {cian}SELECCIONA UN NÚMERO (0 para cancelar){cianBorde} ]\n  ╰─> {verde}");
+                        if (int.TryParse(Console.ReadLine(), out int sel) && sel > 0 && sel <= archivos.Length)
+                        {
+                            if (partidas[sel - 1] != null)
+                            {
+                                cadete = partidas[sel - 1].Jugador;
+                                realidadAsignada = partidas[sel - 1].RealidadActual;
+                                rutaGuardadoActual = archivos[sel - 1];
+                                perfilSeleccionado = true;
+                                Console.Clear();
+                                DibujarPanelInfo("SISTEMA", $"{verde}Datos recuperados exitosamente.\nBienvenido de vuelta, {cadete.Nombre}.{cian}", verde, blanco);
+                            }
+                            else
+                            {
+                                Console.Clear(); DibujarPanelInfo("ERROR", $"{rojo}El archivo seleccionado está dañado.{cian}", rojo, blanco); Console.ReadKey();
+                            }
+                        }
+                    }
+                    else // BORRAR
+                    {
+                        DibujarPanelInfo("PURGA DE DATOS", listaMsg.TrimEnd('\n'), rojo, blanco);
+                        Console.Write($"\n  {rojo}╭─[ {blanco}NÚMERO A ELIMINAR (0 para cancelar){rojo} ]\n  ╰─> {blanco}");
+                        if (int.TryParse(Console.ReadLine(), out int sel) && sel > 0 && sel <= archivos.Length)
+                        {
+                            File.Delete(archivos[sel - 1]);
+                            Console.Clear();
+                            DibujarPanelInfo("PURGA COMPLETADA", $"{verde}El registro ha sido eliminado del multiverso.{cian}", verde, blanco);
+                            Console.ReadKey();
+                        }
+                    }
                 }
-
-                EfectoMecanografia(" > Ingrese su designación (Nombre): ", cian, 25);
-                Console.Write(verde);
-                nombreIngresado = Console.ReadLine() ?? "";
-
-                if (!string.IsNullOrWhiteSpace(nombreIngresado)) break;
-                errorNombre = true;
-            }
-
-            // ----------------------------------------------------
-            // FASE 2: INGRESO DE EDAD (Validación Biométrica)
-            // ----------------------------------------------------
-            int edadIngresada;
-            bool errorEdad = false;
-            while (true)
-            {
-                Console.Clear();
-                DibujarSeparadorAnimado(cian, 85);
-                Console.WriteLine($"{blanco}  [ TERMINAL DE ENTRADA NEXUS - VERIFICACIÓN BIOMÉTRICA ]{reset}");
-                DibujarSeparadorAnimado(cian, 85);
-                Console.WriteLine();
-
-                Console.WriteLine($"{cian} > Designación aceptada: {verde}{nombreIngresado}{reset}\n");
-
-                if (errorEdad)
+                else if (opcInicio == "2") // CREAR NUEVO
                 {
-                    EfectoMecanografia(" [RECHAZADO] Edad inválida o menor a 18 años. Acceso denegado.\n\n", rojo, 15);
+                    string nombreIngresado = "";
+                    while (string.IsNullOrWhiteSpace(nombreIngresado))
+                    {
+                        Console.Clear();
+                        DibujarPanelInfo("VERIFICACIÓN BIOMÉTRICA", $"{blanco}Ingrese su designación (Nombre):{cian}", cianBorde, blanco);
+                        Console.Write($"  {cianBorde}╭─[ {cian}ENTRADA{cianBorde} ]\n  ╰─> {verde}");
+                        nombreIngresado = Console.ReadLine() ?? "";
+                    }
+
+                    int edadIngresada = 0;
+                    while (edadIngresada < 18)
+                    {
+                        Console.Clear();
+                        DibujarPanelInfo("VERIFICACIÓN BIOMÉTRICA", $"{blanco}Designación aceptada: {verde}{nombreIngresado}{blanco}\nIngrese su edad cronológica exacta (Mínimo 18):{cian}", cianBorde, blanco);
+                        Console.Write($"  {cianBorde}╭─[ {cian}ENTRADA{cianBorde} ]\n  ╰─> {verde}");
+                        int.TryParse(Console.ReadLine(), out edadIngresada);
+                    }
+
+                    cadete = new Usuario(nombreIngresado, edadIngresada);
+                    realidadAsignada = new Realidad();
+
+                    // Asigna un nombre de archivo único basado en el nombre del cadete
+                    rutaGuardadoActual = Path.Combine(directorioSaves, $"{cadete.Nombre}.json");
+
+                    Console.Clear();
+                    string msgBienvenida = $"{verde}[ ACCESO CONCEDIDO ] Bienvenido, Explorador {cadete.Nombre}.\n{gris}Perfil biométrico verificado: {cadete.Edad} años.\n\n";
+                    msgBienvenida += $"{blanco}Sincronizando coordenadas cuánticas...\nAnclaje establecido.\n\n{cian}Decodificando firma de realidad: {magenta}{realidadAsignada.Nombre}{cian}";
+                    DibujarPanelInfo("CREACIÓN DE PERFIL", msgBienvenida, verde, blanco);
+                    perfilSeleccionado = true;
                 }
-
-                EfectoMecanografia(" > Ingrese su edad cronológica exacta: ", cian, 25);
-                Console.Write(verde);
-
-                if (int.TryParse(Console.ReadLine(), out edadIngresada) && edadIngresada >= 18) break;
-                errorEdad = true;
             }
 
-            // ----------------------------------------------------
-            // FASE 3: CREACIÓN DE USUARIO Y ASIGNACIÓN DE REALIDAD
-            // ----------------------------------------------------
-            Console.Clear();
-            Usuario cadete = new Usuario(nombreIngresado, edadIngresada);
-            Realidad realidadAsignada = new Realidad();
-
-            DibujarSeparadorAnimado(verde, 85);
-            EfectoMecanografia($" [ ACCESO CONCEDIDO ] Bienvenido, Explorador {cadete.Nombre}.\n", verde, 35);
-            EfectoMecanografia($" Perfil biométrico verificado: {cadete.Edad} años.\n", gris, 15);
-            DibujarSeparadorAnimado(verde, 85);
-            Console.WriteLine();
-            Thread.Sleep(500);
-
-            EfectoMecanografia(" > INICIANDO PROTOCOLO DE ANCLAJE MULTIVERSAL\n\n", blanco, 20);
-
-            // LA MAGIA DE LA BARRA DE PROGRESO
-            AnimacionBarraProgreso(" > Sincronizando coordenadas cuánticas", blanco, cian, gris);
-
-            Thread.Sleep(300);
-            Console.WriteLine();
-            EfectoMecanografia(" > ANCLAJE ESTABLECIDO.\n", verde, 25);
-            Thread.Sleep(400);
-
-            // ANIMACIÓN DE GLITCH AL REVELAR LA REALIDAD
-            Console.WriteLine();
-            Console.Write($"{blanco} > Decodificando firma de realidad: {reset}");
-
-            // GUARDAMOS LA COORDENADA EXACTA PARA NO PERDERNOS
-            int glitchX = Console.CursorLeft;
-            int glitchY = Console.CursorTop;
-
-            string[] glitchChars = { "0x@#%!", "&*$&#1", "X∆O§?!", "101100", "......", "------" };
-            Random rndGlitch = new Random();
-
-            for (int i = 0; i < 15; i++) // Aumenté a 15 para que dure un microsegundo más
-            {
-                Console.SetCursorPosition(glitchX, glitchY); // Volvemos exactamente al inicio del glitch
-                Console.Write($"\u001b[91m[{glitchChars[rndGlitch.Next(glitchChars.Length)]}]\u001b[0m");
-                Thread.Sleep(70);
-            }
-
-            // SOBREESCRIBIMOS EL GLITCH CON EL NOMBRE FINAL
-            Console.SetCursorPosition(glitchX, glitchY);
-            string fondoMorado = "\u001b[45m";
-
-            // Asegurarnos de que borre completamente el glitch si el nombre del mundo es muy corto
-            string nombreMundo = $" {realidadAsignada.Nombre} ";
-            if (nombreMundo.Length < 8) nombreMundo = nombreMundo.PadRight(8);
-
-            Console.WriteLine($"{fondoMorado}{blanco}{nombreMundo}{reset}           \n");
-
-            Thread.Sleep(800);
-
-            // EFECTO PARPADEO PARA CONTINUAR
-            string mensajeStart = ">>> PRESIONA CUALQUIER TECLA PARA ENTRAR A LA SIMULACIÓN <<<";
-            Console.SetCursorPosition((85 - mensajeStart.Length) / 2, Console.CursorTop + 2);
-            Console.Write($"{amarillo}{mensajeStart}{reset}");
+            Console.Write($"\n  {gris}>>> PRESIONA CUALQUIER TECLA PARA ENTRAR A LA SIMULACIÓN <<<");
             Console.ReadKey(true);
+
+            // Función interna rápida para guardar actualizada
+            void GuardarJuego()
+            {
+                DatosPartida datos = new DatosPartida { Jugador = cadete, RealidadActual = realidadAsignada };
+                File.WriteAllText(rutaGuardadoActual, JsonSerializer.Serialize(datos));
+            }
 
             // Creamos una cola con dos fragmentos del virus IRIS
             Queue<EntidadIris> enjambreIris = new Queue<EntidadIris>();
@@ -196,40 +213,39 @@ namespace NEXUS
 
                 Console.WriteLine($"\n{cianBorde}  ╭{lineaBorde}╮");
 
-                // Fila 0: TÍTULO (21 letras exactas) -> 77 - 21 = 56 espacios
+                // Fila 0: TÍTULO
                 Console.WriteLine($"  │ {blanco}NEXUS TRAINING SYSTEM{new string(' ', 55)}{cianBorde}│");
                 Console.WriteLine($"  ├{lineaBorde}┤");
 
                 // Fila 1: Explorador y Realidad
-                int lenExp = 12 + cadete.Nombre.Length; // "EXPLORADOR: " mide 12
-                int lenReal = 10 + realidadAsignada.Nombre.Length; // "REALIDAD: " mide 10
+                int lenExp = 12 + cadete.Nombre.Length;
+                int lenReal = 10 + realidadAsignada.Nombre.Length;
                 int espacios1 = anchoInterior - lenExp - lenReal;
                 if (espacios1 < 0) espacios1 = 0;
 
-                Console.WriteLine($"  │ {cian}EXPLORADOR: {verde}{cadete.Nombre}{new string(' ', espacios1-1)}{cian}REALIDAD: {magenta}{realidadAsignada.Nombre}{cianBorde}│");
+                Console.WriteLine($"  │ {cian}EXPLORADOR: {verde}{cadete.Nombre}{new string(' ', espacios1 - 1)}{cian}REALIDAD: {magenta}{realidadAsignada.Nombre}{cianBorde}│");
 
-                // Fila 2: Energía (Alineando los corchetes)
-                // "ENERGÍA:" se formatea para ocupar exactamente 12 caracteres (como "ESTABILIDAD:")
+                // Fila 2: Energía (Proporcional a 10 bloques visuales)
                 string energiaTxt = $"{cadete.Energia}/{cadete.EnergiaMax}";
                 Console.Write($"  │ {cian}{"ENERGÍA:",-12}{verde}{energiaTxt,5} {cian}[");
 
-                for (int i = 0; i < cadete.EnergiaMax; i++) Console.Write(i < cadete.Energia ? $"{verde}██" : $"{gris}░░");
+                int bloquesEnergia = (cadete.Energia * 10) / cadete.EnergiaMax;
+                for (int i = 0; i < 10; i++) Console.Write(i < bloquesEnergia ? $"{verde}██" : $"{gris}░░");
 
-                int lenEnergiaPre = 12 + 5 + 2; // "ENERGÍA:" (12) + "10/10" (5) + " [" (2)
-                int espacios2 = anchoInterior - lenEnergiaPre - 20 - 1;
+                int lenEnergiaPre = 12 + 5 + 2;
+                int espacios2 = anchoInterior - lenEnergiaPre - 20 - 1; // 20 caracteres fijos de la barra
                 if (espacios2 < 0) espacios2 = 0;
 
                 Console.WriteLine($"{cian}]{new string(' ', espacios2 - 1)}{cianBorde}│");
 
-                // Fila 3: Estabilidad (Sin el 0 inicial)
-                // En vez de :D3, usamos PadLeft(3) para rellenar con espacios si es "30" y no empujar la barra
+                // Fila 3: Estabilidad (Proporcional a 10 bloques visuales)
                 string estabTxt = $"{realidadAsignada.Estabilidad.ToString().PadLeft(3)}%";
                 Console.Write($"  │ {cian}ESTABILIDAD:{verde}{estabTxt,5} {cian}[");
 
                 int bloquesEst = realidadAsignada.Estabilidad / 10;
                 for (int i = 0; i < 10; i++) Console.Write(i < bloquesEst ? $"{magenta}██" : $"{gris}░░");
 
-                int lenEstabPre = 12 + 5 + 2; // "ESTABILIDAD:" (12) + " 30%" (5) + " [" (2)
+                int lenEstabPre = 12 + 5 + 2;
                 int espacios3 = anchoInterior - lenEstabPre - 20 - 1;
                 if (espacios3 < 0) espacios3 = 0;
 
@@ -238,21 +254,18 @@ namespace NEXUS
                 Console.WriteLine($"  ╰{lineaBorde}╯\n");
 
                 // --- BOTONES DINÁMICOS ANIMADOS ---
-                // Aparecen uno por uno con un ligero delay
-                DibujarBotonMenu("1", "Observar realidad", "", amarilloUI, cian); Thread.Sleep(15);
-                DibujarBotonMenu("2", "Buscar objetos", "[-3 Energía]", amarilloUI, verde); Thread.Sleep(15);
-                DibujarBotonMenu("3", "Inventario", "", amarilloUI, cian); Thread.Sleep(15);
-                DibujarBotonMenu("4", "Utilizar objeto", "[-2 Energía]", amarilloUI, verde); Thread.Sleep(15);
-                DibujarBotonMenu("5", "Recuperar energía", "[+5 Recarga]", amarilloUI, "\u001b[38;5;47m"); Thread.Sleep(15);
-                DibujarBotonMenu("6", "Consultar estado", "", amarilloUI, cian); Thread.Sleep(15);
-                DibujarBotonMenu("7", "Manual del simulador", "", amarilloUI, cian); Thread.Sleep(15);
-                DibujarBotonMenu("8", "Intentar desconexión", "", amarilloUI, "\u001b[38;5;196m"); Thread.Sleep(15);
-                DibujarBotonMenu("9", "Atlas de Realidades", "", amarilloUI, cian); Thread.Sleep(15);
-
+                DibujarBotonMenu("1", "Explorar realidad", "", amarilloUI, cian); Thread.Sleep(15);
+                DibujarBotonMenu("2", "Inventario y Crafteo", "", amarilloUI, cian); Thread.Sleep(15);
+                DibujarBotonMenu("3", "Recuperar energía", "[+5 Recarga]", amarilloUI, "\u001b[38;5;47m"); Thread.Sleep(15);
+                DibujarBotonMenu("4", "Tienda de Proficiencia", "[Mejoras]", amarilloUI, magenta); Thread.Sleep(15);
+                DibujarBotonMenu("5", "Consultar estado", "", amarilloUI, cian); Thread.Sleep(15);
+                DibujarBotonMenu("6", "Manual del simulador", "", amarilloUI, cian); Thread.Sleep(15);
+                DibujarBotonMenu("7", "Intentar desconexión", "", amarilloUI, "\u001b[38;5;196m"); Thread.Sleep(15);
+                DibujarBotonMenu("8", "Atlas de Realidades", "", amarilloUI, cian); Thread.Sleep(15);
 
                 if (realidadAsignada.Estabilidad >= 100)
                 {
-                    DibujarBotonMenu("10", "¡INICIAR EXTRACCIÓN!", "[NIVEL ESTABLE]", "\u001b[38;5;11m", "\u001b[38;5;11m"); Thread.Sleep(15);
+                    DibujarBotonMenu("9", "¡INICIAR EXTRACCIÓN!", "[NIVEL ESTABLE]", "\u001b[38;5;11m", "\u001b[38;5;11m"); Thread.Sleep(15);
                 }
 
                 // --- PROMPT DE ENTRADA ---
@@ -271,397 +284,537 @@ namespace NEXUS
                 // TOMA DE DECISIONES DE NEXUS
                 switch (opcion)
                 {
-                    case 1: // Observar realidad (Pistas narrativas)
+                    case 1: // Explorar realidad
                         Console.Clear();
-                        string msgSensorial = $"{cian}Sintonizando los ecos de {magenta}{realidadAsignada.Nombre}{cian}...\n";
-                        msgSensorial += $"{gris}Analizando fluctuaciones cuánticas...{cian}";
-                        DibujarPanelInfo("SENSORIAL", msgSensorial, cianBorde, blanco);
-                        Thread.Sleep(1000);
+                        Console.Write("\u001b[3J");
 
-                        string[] pistasTiempo = { "Miras tu reloj y las manecillas giran frenéticamente en sentido contrario.", "Notas que la piel de tus manos envejece y rejuvenece en cuestión de segundos.", "Una gota de lluvia grisácea se detiene en el aire frente a tus ojos, completamente congelada.", "Escuchas tus propios pasos resonar un par de segundos ANTES de que tu bota toque el suelo.", "Una planta a tus pies brota, florece, se marchita y se convierte en polvo en un solo parpadeo.", "El sol parece cruzar el cielo a tirones, haciendo que las sombras de tu entorno bailen de forma errática.", "Tiras una pequeña piedra y, antes de tocar el suelo, vuelve volando hacia la palma de tu mano.", "Sientes un fuerte déjà vu; jurarías que ya caminaste por este mismo sendero hace exactamente un minuto.", "Tu respiración suena desfasada, como si estuvieras inhalando ayer y exhalando mañana.", "Ves el cadáver de un insecto en el suelo recomponerse y salir volando en reversa." };
-                        string[] pistasEspacio = { "Caminas diez metros en línea recta, pero al darte la vuelta, tu punto de origen está a kilómetros de distancia.", "Las paredes de la estructura cercana no se unen en ángulos rectos, formando esquinas imposibles que marean tu vista.", "Un pilar a lo lejos parece inmenso, pero al dar un paso hacia él, se encoge hasta caber en la palma de tu mano.", "Miras a través del reflejo de un charco y te ves a ti mismo de espaldas, mirándote a ti mismo.", "El horizonte parece curvarse hacia arriba, encerrándote en un valle que se siente como el interior de una esfera.", "Intentas alcanzar un escombro cercano, pero tu brazo parece estirarse sin llegar nunca a tocarlo.", "Dejas caer una moneda y, en lugar de chocar con el piso, cae infinitamente a través de un abismo que no estaba ahí.", "El camino frente a ti se bifurca en tres direcciones, pero las tres parecen llevar exactamente a la misma roca.", "La topografía del terreno cambia cada vez que parpadeas, alterando las distancias de forma indetectable.", "El cielo y el suelo parecen intercambiar lugares bruscamente durante una fracción de segundo." };
-                        string[] pistasMente = { "Un recuerdo de tu infancia aflora, pero te das cuenta con terror de que le pertenece a otra persona.", "Intentas recordar tu propio nombre por un segundo, pero tu cerebro se queda en un blanco absoluto.", "Las sombras en el borde de tu visión toman formas humanoides que te observan con clara decepción.", "Sientes la abrumadora certeza de que algo invisible está leyendo tus pensamientos en tiempo real.", "Las letras del menú de tu traje parpadean y se transforman en símbolos incomprensibles que, extrañamente, puedes leer.", "Sientes una profunda tristeza por la pérdida de un cadete compañero... un compañero que jamás existió.", "Una voz idéntica a la tuya te susurra al oído que la única salida razonable es rendirse al vacío.", "Cierras los ojos y, en lugar de oscuridad, ves un laberinto geométrico que pulsa al ritmo de tus latidos.", "Comienzas a dudar si alguna vez entraste a la simulación NEXUS o si llevas toda tu vida atrapado aquí.", "El miedo irracional de que tus propios brazos son sintéticos y no te pertenecen se apodera de tu razón." };
-                        string[] pistasSilencio = { "Pisas una rama seca. Se rompe en mil pedazos, pero el crujido es reemplazado por un vacío que lastima tus oídos.", "Gritas con todas tus fuerzas, pero de tu garganta no sale absolutamente ningún sonido.", "El aire es tan espeso y mudo que el latido de tu propio corazón se vuelve un tambor que te ensordece por completo.", "Ves una enorme estructura colapsar a la distancia, cayendo en la más profunda y absoluta falta de ruido.", "Chocas dos piezas de metal frente a tu rostro, pero el impacto no genera ni la más mínima vibración acústica.", "El zumbido constante del sistema de tu traje de explorador se apaga; el vacío auditivo es casi asfixiante.", "Sientes una presión enorme en los tímpanos, como si todo el sonido del mundo hubiera sido succionado hacia el cielo.", "Intentas aplaudir, pero el impacto de tus palmas es absorbido por el ambiente como si golpearas bajo el agua.", "La quietud es tan antinatural que sientes que hacer el más mínimo ruido podría quebrar la realidad como un cristal.", "Escuchas un pitido agudo y constante dentro de tu cabeza, tu cerebro intentando compensar la muerte del sonido exterior." };
+                        realidadAsignada.RellenarEntidadesLocales(cadete.Nivel); // Enemigos escalan con el nivel
 
-                        Random rndPista = new Random();
-                        string pistaDescubierta = "";
+                        // GENERADOR DE OBJETIVO EXTRA (Solo dura esta expedición)
+                        string[] nombresObj = { "Exterminador (Mata Enemigos)", "Curioso (Visita Eventos '?')", "Chatarrero (Recoge Restos ▤)" };
+                        int tipoObj = new Random().Next(3);
+                        int metaObj = tipoObj == 1 ? 2 : 3;
+                        int progresoObj = 0;
+                        bool objCompletado = false;
 
-                        switch (realidadAsignada.Anomalia)
+                        bool explorando = true;
+                        int px = realidadAsignada.CadeteStartX;
+                        int py = realidadAsignada.CadeteStartY;
+                        int contadorPasos = 0;
+                        string mensajeLog = $"{verde}Enlace establecido con el sector local.{cian}";
+
+                        while (explorando)
                         {
-                            case Anomalia.Tiempo: pistaDescubierta = pistasTiempo[rndPista.Next(pistasTiempo.Length)]; break;
-                            case Anomalia.Espacio: pistaDescubierta = pistasEspacio[rndPista.Next(pistasEspacio.Length)]; break;
-                            case Anomalia.Mente: pistaDescubierta = pistasMente[rndPista.Next(pistasMente.Length)]; break;
-                            case Anomalia.Silencio: pistaDescubierta = pistasSilencio[rndPista.Next(pistasSilencio.Length)]; break;
-                        }
+                            Console.SetCursorPosition(0, 0);
 
-                        string obsStr = $"{amarillo}\"{pistaDescubierta}\"\n\n";
-                        obsStr += $"{gris}Revisa tu inventario. ¿Tienes algo que contrarreste esto?{cian}";
-                        DibujarPanelInfo("OBSERVACIÓN", obsStr, amarilloUI, amarilloUI);
-                        break;
+                            // --- 1. CABECERA CON ENERGÍA, VIDA Y OBJETIVO ---
+                            int anchoMapaUI = 83;
+                            string bordeH = new string('─', anchoMapaUI - 2);
+                            Console.WriteLine($"  {cianBorde}╭{bordeH}╮{reset}");
 
-                    case 2: // Buscar objetos
-                        Console.Clear();
-                        if (cadete.Energia >= 3 && realidadAsignada.Estabilidad >= 70)
-                        {
-                            cadete.Energia -= 3;
-                            cadete.Experiencia += 25;
-                            DibujarPanelInfo("ACCIÓN", $"{blanco}Explorando el sector de forma segura...{cian}", verde, blanco);
-                        }
-                        else if (cadete.Energia >= 3 && realidadAsignada.Estabilidad < 70)
-                        {
-                            cadete.Energia -= 4;
-                            cadete.Experiencia += 35;
-                            string inestMsg = $"{blanco}Explorando un sector inestable...\n";
-                            inestMsg += $"{amarillo}Advertencia: La inestabilidad cuántica exige mayor esfuerzo. (-1 Energía adicional){cian}";
-                            DibujarPanelInfo("ACCIÓN PELIGROSA", inestMsg, amarillo, blanco);
-                        }
-                        else
-                        {
-                            DibujarPanelInfo("NEXUS ADVIERTE", $"{rojo}Energía insuficiente para explorar y buscar objetos.{cian}", rojo, rojo);
-                            break;
-                        }
-                        Thread.Sleep(800);
+                            // Fila 1: Explorador y Energía (PROPORCIONAL)
+                            string expLeft = $"EXPLORADOR: {cadete.Nombre}";
+                            string energiaTxtExpl = $"{cadete.Energia}/{cadete.EnergiaMax}";
+                            string expRight = $"ENERGÍA: {energiaTxtExpl,5} [";
+                            int expBarLen = 20; // 10 bloques * 2 caracteres = 20 fijos
 
-                        string[] textosExploracion = { $"Caminas por los senderos de {magenta}{realidadAsignada.Nombre}{cian} y vislumbras algo brillando en el suelo...", $"Mientras exploras las ruinas de {magenta}{realidadAsignada.Nombre}{cian}, tropiezas con un artefacto inusual...", $"Una extraña resonancia en {magenta}{realidadAsignada.Nombre}{cian} te guía hacia un objeto oculto...", $"Escaneando la superficie de {magenta}{realidadAsignada.Nombre}{cian}, tu visor detecta una anomalía material...", $"Entre las sombras de {magenta}{realidadAsignada.Nombre}{cian}, descubres algo que no pertenece a este lugar...", $"Avanzas con cautela por {magenta}{realidadAsignada.Nombre}{cian} y encuentras los restos de un explorador anterior...", $"El viento cuántico de {magenta}{realidadAsignada.Nombre}{cian} aparta el polvo, revelando un misterioso artefacto...", $"Inspeccionando una estructura inestable en {magenta}{realidadAsignada.Nombre}{cian}, hallas una pieza de equipo intacta...", $"Sientes un leve tirón magnético en {magenta}{realidadAsignada.Nombre}{cian} que te lleva directamente hacia un ítem...", $"Tras una larga caminata por los ecos de {magenta}{realidadAsignada.Nombre}{cian}, notas un objeto flotando en el aire..." };
-                        Random rndExploracion = new Random();
-                        string ambientacion = textosExploracion[rndExploracion.Next(textosExploracion.Length)];
+                            int sp1 = 81 - 1 - expLeft.Length - (expRight.Length + expBarLen + 1);
+                            if (sp1 < 1) sp1 = 1;
 
-                        Objeto lootEncontrado;
-                        bool yaLoTiene;
-                        do
-                        {
-                            lootEncontrado = new Objeto();
-                            yaLoTiene = false;
-                            foreach (Objeto item in cadete.Inventario) { if (item.Nombre == lootEncontrado.Nombre) { yaLoTiene = true; break; } }
-                        } while (yaLoTiene);
+                            Console.Write($"  {cianBorde}│ {cian}EXPLORADOR: {verde}{cadete.Nombre}{new string(' ', sp1)}{cian}ENERGÍA: {verde}{energiaTxtExpl,5} {cian}[");
 
-                        string hallazgoMsg = $"{cian}{ambientacion}\n\n";
-                        hallazgoMsg += $"{blanco}¡Has encontrado un(a) {magenta}{lootEncontrado.Nombre}{blanco}!\n\n";
+                            int bloquesEneHUD = (cadete.Energia * 10) / cadete.EnergiaMax;
+                            for (int i = 0; i < 10; i++) Console.Write(i < bloquesEneHUD ? $"{verde}██" : $"{gris}░░");
+                            Console.WriteLine($"{cian}]{cianBorde}│{reset}");
 
-                        bool guardado = cadete.RecogerObjeto(lootEncontrado);
-                        if (guardado)
-                        {
-                            hallazgoMsg += $"{verde}[ÉXITO]: El objeto ha sido almacenado en tu inventario de forma segura.\n";
-                        }
-                        else
-                        {
-                            hallazgoMsg += $"{amarillo}[INVENTARIO LLENO]: Intentas guardar el(la) {lootEncontrado.Nombre}, pero no tienes espacio ({cadete.CapacidadInventario}/{cadete.CapacidadInventario}).\n";
-                            hallazgoMsg += $"Al no poder contenerlo, el objeto pierde cohesión y desaparece frente a tus ojos.\n";
-                        }
-                        hallazgoMsg += $"{verde}Experiencia ganada por la exploración registrada.{cian}";
+                            // Fila 2: Objetivo y Vida (PROPORCIONAL)
+                            string objName = nombresObj[tipoObj];
+                            string objLeft = $"OBJETIVO:   {objName}";
+                            string vidaTxtExpl = $"{cadete.Vida}/{cadete.VidaMax}";
+                            string vidaRight = $"VIDA:    {vidaTxtExpl,5} [";
+                            int vidaBarLen = 20; // 10 bloques * 2 caracteres = 20 fijos
 
-                        DibujarPanelInfo("REPORTE DE EXPLORACIÓN", hallazgoMsg, cianBorde, cian);
-                        break;
+                            int sp2 = 81 - 1 - objLeft.Length - (vidaRight.Length + vidaBarLen + 1);
+                            if (sp2 < 1) sp2 = 1;
 
-                    case 3: // Inventario
-                        Console.Clear();
-                        if (cadete.Inventario.Count == 0)
-                        {
-                            DibujarPanelInfo("INVENTARIO DEL EXPLORADOR", $"{amarillo}Tu inventario está vacío. No tienes objetos para inspeccionar.{cian}", amarillo, blanco);
-                        }
-                        else
-                        {
-                            string invMsg = $"{blanco}Capacidad actual: {cadete.Inventario.Count}/{cadete.CapacidadInventario}\n\n";
-                            for (int i = 0; i < cadete.Inventario.Count; i++)
+                            Console.Write($"  {cianBorde}│ {cian}OBJETIVO:   {amarillo}{objName}{new string(' ', sp2)}{cian}VIDA:    {verde}{vidaTxtExpl,5} {cian}[");
+
+                            int bloquesVidaHUD = (cadete.Vida * 10) / cadete.VidaMax;
+                            for (int i = 0; i < 10; i++) Console.Write(i < bloquesVidaHUD ? $"\u001b[38;5;196m██" : $"{gris}░░");
+                            Console.WriteLine($"{cian}]{cianBorde}│{reset}");
+
+                            // Fila 3: Progreso y Fragmentos
+                            string colorObj = objCompletado ? verde : amarillo;
+                            string objStr = objCompletado ? "COMPLETADO" : $"{progresoObj}/{metaObj}";
+                            string estLeft = $"ESTADO:     {objStr}";
+                            string fragRight = $"FRAGMENTOS: {cadete.BolsaFragmentos}";
+
+                            int sp3 = 81 - 1 - estLeft.Length - fragRight.Length;
+                            if (sp3 < 1) sp3 = 1;
+
+                            Console.WriteLine($"  {cianBorde}│ {blanco}ESTADO:     {colorObj}{objStr}{new string(' ', sp3)}{cian}FRAGMENTOS: {magenta}{cadete.BolsaFragmentos} {cianBorde}│{reset}");
+
+                            Console.WriteLine($"  {cianBorde}├{bordeH}┤{reset}");
+
+                            // --- 2. RENDERIZADO DEL MAPA ---
+                            for (int y = 0; y < realidadAsignada.AltoMapa; y++)
                             {
-                                invMsg += $"{blanco}{i + 1}. {verde}{cadete.Inventario[i].Nombre}{cian}\n";
-                            }
-                            DibujarPanelInfo("INVENTARIO DEL EXPLORADOR", invMsg.TrimEnd('\n'), cianBorde, blanco);
-
-                            Console.Write($"\n  {cianBorde}╭─[ {cian}INSPECCIÓN DE OBJETO{cianBorde} ]\n  ╰─> {cian}Selecciona el número (o '0' para cancelar): {verde}");
-                            string inputInventario = Console.ReadLine() ?? "";
-                            Console.Write(cian);
-
-                            if (int.TryParse(inputInventario, out int indiceObjeto))
-                            {
-                                if (indiceObjeto > 0 && indiceObjeto <= cadete.Inventario.Count)
+                                Console.Write($"  {cianBorde}│ {reset}");
+                                for (int x = 0; x < realidadAsignada.AnchoMapa; x++)
                                 {
-                                    Objeto objSelec = cadete.Inventario[indiceObjeto - 1];
-                                    Console.Clear();
-                                    string objInfo = $"{blanco}Nombre:      {magenta}{objSelec.Nombre}\n";
-                                    objInfo += $"{blanco}Usos rest.:  {verde}{objSelec.Usos}\n";
-                                    objInfo += $"{blanco}Descripción: {cian}{objSelec.Descripcion}";
-                                    DibujarPanelInfo("ANÁLISIS DE OBJETO", objInfo, magenta, blanco);
-
-                                    Console.Write($"\n  {cianBorde}╭─[ {amarillo}DESCARTAR OBJETO{cianBorde} ]\n  ╰─> {cian}¿Deseas descartar {magenta}{objSelec.Nombre}{cian} para liberar espacio? (S/N): {verde}");
-                                    string opcionDescartar = (Console.ReadLine() ?? "").Trim().ToUpper();
-                                    Console.Write(cian);
-
-                                    if (opcionDescartar == "S")
-                                    {
-                                        cadete.DescartarObjeto(objSelec);
-                                        DibujarPanelInfo("SISTEMA", $"{rojo}{objSelec.Nombre} ha sido destruido en el vacío cuántico.{cian}", rojo, blanco);
-                                    }
+                                    if (x == px && y == py) { Console.Write($"{verde}@{reset} "); }
                                     else
                                     {
-                                        DibujarPanelInfo("SISTEMA", $"{verde}El objeto permanece seguro en tu inventario.{cian}", verde, blanco);
+                                        char tile = realidadAsignada.MapaLocal[y, x];
+                                        if (tile == '█' || tile == '▓' || tile == '▒' || tile == '░') Console.Write($"{gris}{tile}{reset} ");
+                                        else if (tile == '·') Console.Write($"\u001b[38;5;236m{tile}{reset} ");
+                                        else if (tile == '☗') Console.Write($"{cian}{tile}{reset} ");
+                                        else if (tile == '☖') Console.Write($"{amarillo}{tile}{reset} ");
+                                        else if (tile == '಄') Console.Write($"{magenta}{tile}{reset} ");
+                                        else if (tile == '♡') Console.Write($"\u001b[38;5;196m{tile}{reset} ");
+                                        else if (tile == '▤') Console.Write($"{amarilloUI}{tile}{reset} ");
+                                        else if (tile == 'Ж') Console.Write($"{rojo}{tile}{reset} ");
+                                        else if (tile == 'Φ') Console.Write($"{verde}{tile}{reset} ");
+                                        else if (tile == '?') Console.Write($"{blanco}{tile}{reset} ");
+                                        else Console.Write($"{tile} ");
                                     }
                                 }
-                                else if (indiceObjeto != 0) { DibujarPanelInfo("ERROR", $"{rojo}Ranura de inventario no encontrada.{cian}", rojo, rojo); }
+                                Console.WriteLine($"{cianBorde}│{reset}");
                             }
-                            else { DibujarPanelInfo("ERROR", $"{rojo}Entrada no válida.{cian}", rojo, rojo); }
+                            Console.WriteLine($"  {cianBorde}╰{bordeH}╯{reset}");
+
+                            // --- 3. LEYENDA Y REGISTRO DE EVENTOS ---
+                            Console.WriteLine($"  {blanco}[ {verde}@ {blanco}] Cadete    [ {cian}☗ {blanco}] Base      [ {magenta}಄ {blanco}] Anomalía  [ {amarilloUI}▤ {blanco}] Restos");
+                            Console.WriteLine($"  {blanco}[ {rojo}Ж {blanco}] Enemigo   [ {verde}Φ {blanco}] Energía   [ \u001b[38;5;196m♡ {blanco}] Salud     [ {blanco}? {blanco}] Evento");
+                            Console.WriteLine($"  {gris}CONTROLES: [W A S D] Moverse  |  [ESPACIO] Extraer (Solo en Base o Campamento){reset}\n");
+                            Console.WriteLine($"  {blanco}> LOG: {mensajeLog}                                    ");
+
+                            ConsoleKeyInfo tecla = Console.ReadKey(true);
+                            int nx = px, ny = py;
+
+                            if (tecla.Key == ConsoleKey.W || tecla.Key == ConsoleKey.UpArrow) ny--;
+                            else if (tecla.Key == ConsoleKey.S || tecla.Key == ConsoleKey.DownArrow) ny++;
+                            else if (tecla.Key == ConsoleKey.A || tecla.Key == ConsoleKey.LeftArrow) nx--;
+                            else if (tecla.Key == ConsoleKey.D || tecla.Key == ConsoleKey.RightArrow) nx++;
+                            else if (tecla.Key == ConsoleKey.Spacebar)
+                            {
+                                if (realidadAsignada.MapaLocal[py, px] == '☗') { explorando = false; continue; }
+                                else if (realidadAsignada.MapaLocal[py, px] == '☖') { realidadAsignada.MapaLocal[py, px] = '·'; explorando = false; continue; }
+                                else { mensajeLog = $"{amarillo}Interferencia: Solo puedes extraer desde una Base (☗) o Campamento (☖).{cian}"; continue; }
+                            }
+
+                            if (nx >= 0 && nx < realidadAsignada.AnchoMapa && ny >= 0 && ny < realidadAsignada.AltoMapa)
+                            {
+                                char destino = realidadAsignada.MapaLocal[ny, nx];
+
+                                // Evento Sorpresa
+                                if (destino == '?')
+                                {
+                                    char[] opcionesRnd = { '♡', '▤', 'Ж', 'Φ', '಄', '☖' };
+                                    destino = opcionesRnd[new Random().Next(opcionesRnd.Length)];
+                                    mensajeLog = $"{amarillo}¡El evento sorpresa resultó ser '{destino}'!{cian} ";
+                                    if (tipoObj == 1 && !objCompletado) progresoObj++;
+                                }
+
+                                if (destino == '█' || destino == '▓' || destino == '▒' || destino == '░') { mensajeLog = $"{rojo}El vacío cuántico es denso. No puedes avanzar por ahí.{cian}"; }
+                                else
+                                {
+                                    px = nx; py = ny;
+
+                                    // Limpiamos el texto genérico si no hubo evento sorpresa
+                                    if (!mensajeLog.Contains("sorpresa")) mensajeLog = $"{gris}Avanzando por el sector...{cian}";
+
+                                    contadorPasos++;
+                                    if (contadorPasos >= 3)
+                                    {
+                                        cadete.Energia--; contadorPasos = 0;
+                                        if (cadete.Energia <= 0)
+                                        {
+                                            explorando = false; Console.Clear();
+                                            DibujarPanelInfo("SISTEMA DAÑADO", $"{rojo}¡ENERGÍA AGOTADA!\nEl soporte vital colapsó en medio de la exploración.\nSistemas de extracción de emergencia activados.{cian}", rojo, blanco);
+                                            Thread.Sleep(3000); continue;
+                                        }
+                                    }
+
+                                    // Eventos de casilla
+                                    if (destino == 'Φ') { cadete.Energia += 3; realidadAsignada.MapaLocal[py, px] = '·'; mensajeLog = $"{verde}Absorbiste un Núcleo (+3 E).{cian}"; }
+                                    else if (destino == '♡') { int cura = new Random().Next(20, 36); cadete.Vida += cura; realidadAsignada.MapaLocal[py, px] = '·'; mensajeLog = $"{verde}Regeneración aplicada (+{cura} Vida).{cian}"; }
+                                    else if (destino == '▤') { cadete.Restos++; realidadAsignada.MapaLocal[py, px] = '·'; mensajeLog = $"{amarilloUI}Has encontrado Restos Tecnológicos (+1).{cian}"; if (tipoObj == 2 && !objCompletado) progresoObj++; }
+                                    else if (destino == '☖') { mensajeLog = $"{amarillo}Campamento alcanzado. ESPACIO para salir y consumirlo.{cian}"; }
+                                    else if (destino == '☗') { mensajeLog = $"{cian}Ancla Base alcanzada. ESPACIO para salir.{cian}"; }
+
+                                    // Sellar Anomalía
+                                    else if (destino == '಄')
+                                    {
+                                        Console.Clear(); Console.Write("\u001b[3J");
+                                        if (cadete.Inventario.Count == 0)
+                                        {
+                                            DibujarPanelInfo("ANOMALÍA ENCONTRADA", $"{amarillo}Estás frente a una fisura, pero no tienes objetos en tu inventario para intentar sellarla.{cian}", amarillo, blanco);
+                                        }
+                                        else
+                                        {
+                                            string usoMsg = $"{blanco}Estás sobre una anomalía. Selecciona un objeto para interactuar:\n\n";
+                                            for (int i = 0; i < cadete.Inventario.Count; i++)
+                                                usoMsg += $"{blanco}{i + 1}. {verde}{cadete.Inventario[i].Nombre}{cian} (Usos: {cadete.Inventario[i].Usos})\n";
+                                            DibujarPanelInfo("INTERFAZ DE MANIPULACIÓN", usoMsg.TrimEnd('\n'), cianBorde, blanco);
+
+                                            Console.Write($"\n  {cianBorde}╭─[ {cian}UTILIZAR OBJETO{cianBorde} ]\n  ╰─> {cian}Ingresa el número a utilizar (o '0' para cancelar): {verde}");
+                                            if (int.TryParse(Console.ReadLine() ?? "", out int indiceUso) && indiceUso > 0 && indiceUso <= cadete.Inventario.Count)
+                                            {
+                                                if (cadete.Energia >= 2)
+                                                {
+                                                    cadete.Energia -= 2;
+                                                    Objeto objUsado = cadete.Inventario[indiceUso - 1];
+                                                    objUsado.Usos--;
+
+                                                    Console.Clear();
+                                                    string accionMsg = $"{blanco}Desplegando {magenta}{objUsado.Nombre}{cian}...\n{gris}{objUsado.Descripcion}{cian}\n\n";
+                                                    if (objUsado.Contrarresta == realidadAsignada.Anomalia)
+                                                    {
+                                                        realidadAsignada.Estabilidad += 30;
+                                                        realidadAsignada.MapaLocal[py, px] = '·'; // Limpia el mapa
+                                                        accionMsg += $"{verde}[ÉXITO]: La frecuencia resuena perfectamente. La fisura se cierra (+30 Estabilidad).{cian}";
+                                                    }
+                                                    else
+                                                    {
+                                                        realidadAsignada.Estabilidad -= 15;
+                                                        accionMsg += $"{rojo}[INEFICAZ]: ¡Error! Tu torpe interferencia empeoró la situación (-15 Estabilidad).{cian}";
+                                                    }
+                                                    DibujarPanelInfo("ACCIÓN", accionMsg, cianBorde, blanco);
+
+                                                    if (objUsado.Usos <= 0)
+                                                    {
+                                                        DibujarPanelInfo("SISTEMA", $"{amarillo}El límite de integridad de '{objUsado.Nombre}' llegó a cero. Se ha desintegrado.{cian}", amarillo, blanco);
+                                                        cadete.DescartarObjeto(objUsado);
+                                                    }
+                                                }
+                                                else { DibujarPanelInfo("NEXUS ADVIERTE", $"{rojo}Energía insuficiente (Requiere 2).{cian}", rojo, rojo); }
+                                            }
+                                        }
+                                        Console.Write($"\n  {gris}>>> Presiona cualquier tecla para volver al mapa <<<"); Console.ReadKey();
+                                    }
+
+                                    // Combate
+                                    else if (destino == 'Ж')
+                                    {
+                                        Enemigo enemigo = new Enemigo();
+                                        bool enCombate = true; bool bloqueoActivo = false;
+
+                                        while (enCombate)
+                                        {
+                                            Console.Clear(); Console.Write("\u001b[3J");
+
+                                            // Barras puras sin números
+                                            int bCadete = (cadete.Vida * 10) / cadete.VidaMax;
+                                            int bEnemigo = (enemigo.Vida * 10) / enemigo.VidaMax;
+                                            string hpCadeteBar = ""; for (int i = 0; i < 10; i++) hpCadeteBar += (i < bCadete) ? $"{verde}██" : $"{gris}░░";
+                                            string hpEnemigoBar = ""; for (int i = 0; i < 10; i++) hpEnemigoBar += (i < bEnemigo) ? $"{rojo}██" : $"{gris}░░";
+
+                                            string statsStr = $"{verde}CADETE: {cadete.Nombre,-15} VIDA: [{hpCadeteBar}{verde}]\n";
+                                            statsStr += $"{rojo}ENEMIGO: {enemigo.Nombre,-14} VIDA: [{hpEnemigoBar}{rojo}]\n\n";
+                                            statsStr += $"{amarillo}PODER OFENSIVO ENEMIGO: {enemigo.DañoBase}";
+                                            DibujarPanelInfo("ALERTA DE COMBATE", statsStr, rojo, blanco);
+
+                                            string opciones = "1. Ataque Ligero (0 E) | Daño Moderado\n2. Ataque Pesado (1 E) | Gran Daño\n";
+                                            opciones += "3. Bloquear      (0 E) | Reduce el daño enemigo\n";
+                                            opciones += $"4. Escapar       (1 E) | {enemigo.ProbabilidadEscape}% de éxito";
+                                            DibujarPanelInfo("ACCIONES", opciones, amarilloUI, blanco);
+
+                                            Console.Write($"\n  {rojo}╭─[ COMANDO DE COMBATE ]\n  ╰─> {blanco}");
+                                            string cmd = Console.ReadLine() ?? "";
+
+                                            int dañoRealizado = 0; bool turnoEnemigo = true; string msjAccion = "";
+
+                                            if (cmd == "1")
+                                            {
+                                                dañoRealizado = cadete.DañoBase; enemigo.Vida -= dañoRealizado;
+                                                msjAccion = $"{verde}Ejecutas un ataque ligero causando {dañoRealizado} de daño.{cian}";
+                                            }
+                                            else if (cmd == "2")
+                                            {
+                                                if (cadete.Energia >= 1) { cadete.Energia--; dañoRealizado = (int)(cadete.DañoBase * 2.5); enemigo.Vida -= dañoRealizado; msjAccion = $"{verde}Golpe pesado y contundente causando {dañoRealizado} de daño.{cian}"; }
+                                                else { msjAccion = $"{amarillo}Sin energía para ataque pesado. Pierdes el turno.{cian}"; }
+                                            }
+                                            else if (cmd == "3")
+                                            {
+                                                bloqueoActivo = true; msjAccion = $"{verde}Levantas tu guardia, preparándote para el impacto.{cian}";
+                                            }
+                                            else if (cmd == "4")
+                                            {
+                                                if (cadete.Energia >= 1)
+                                                {
+                                                    cadete.Energia--;
+                                                    if (new Random().Next(0, 100) < enemigo.ProbabilidadEscape) { msjAccion = $"{verde}¡Lograste zafarte del combate!{cian}"; enCombate = false; turnoEnemigo = false; mensajeLog = $"{amarillo}Escapaste del enemigo.{cian}"; }
+                                                    else { msjAccion = $"{rojo}Intentaste escapar, pero el enemigo te acorraló.{cian}"; }
+                                                }
+                                                else { msjAccion = $"{amarillo}Sin energía para escapar.{cian}"; }
+                                            }
+                                            else { msjAccion = $"{rojo}Comando inválido. Pierdes tu turno.{cian}"; }
+
+                                            if (enemigo.Vida <= 0)
+                                            {
+                                                msjAccion += $"\n{magenta}¡El enemigo colapsa! Has ganado 1 Fragmento de Realidad.{cian}";
+                                                cadete.BolsaFragmentos++; realidadAsignada.MapaLocal[ny, nx] = '·';
+                                                enCombate = false; turnoEnemigo = false; mensajeLog = $"{verde}Enemigo eliminado.{cian}";
+                                                if (tipoObj == 0 && !objCompletado) progresoObj++;
+                                            }
+
+                                            if (turnoEnemigo && enCombate)
+                                            {
+                                                int dañoRecibido = enemigo.DañoBase;
+                                                if (bloqueoActivo) { dañoRecibido /= 2; msjAccion += $"\n{amarillo}El enemigo ataca, pero tu bloqueo reduce el impacto a {dañoRecibido} de daño.{cian}"; }
+                                                else { msjAccion += $"\n{rojo}El enemigo te golpea causando {dañoRecibido} de daño.{cian}"; }
+                                                cadete.Vida -= dañoRecibido;
+                                                if (cadete.Vida <= 0) { msjAccion += $"\n{fondoRojo}{blanco}¡TUS SIGNOS VITALES HAN COLAPSADO! SISTEMA APAGADO.{reset}"; enCombate = false; explorando = false; conectado = false; }
+                                            }
+                                            bloqueoActivo = false;
+
+                                            Console.Clear(); DibujarPanelInfo("RESULTADO DEL TURNO", msjAccion, cianBorde, blanco);
+                                            Console.Write($"\n  {gris}>>> Presiona cualquier tecla para continuar <<<"); Console.ReadKey();
+                                        }
+                                        Console.Clear(); Console.Write("\u001b[3J");
+                                    }
+
+                                    // Verificador maestro de objetivo
+                                    if (progresoObj >= metaObj && !objCompletado)
+                                    {
+                                        objCompletado = true;
+                                        cadete.Experiencia += 75; // Bono de misión
+                                        mensajeLog = $"{verde}¡OBJETIVO EXTRA COMPLETADO! (+75 EXP).{cian}";
+                                    }
+                                }
+                            }
                         }
+                        Console.Clear();
+                        GuardarJuego();
                         break;
 
-                    case 4: // Utilizar objeto
+                    case 2: // Inventario y Crafteo
                         Console.Clear();
-                        if (cadete.Inventario.Count == 0)
-                        {
-                            DibujarPanelInfo("INTERACCIÓN CANCELADA", $"{amarillo}Tu inventario está vacío. No tienes herramientas para interactuar con esta realidad.{cian}", amarillo, blanco);
-                            break;
-                        }
+                        string invMsg = $"{blanco}=== RECURSOS ===\n";
+                        invMsg += $"Fragmentos de Anomalía: {magenta}{cadete.BolsaFragmentos}{blanco}\n";
+                        invMsg += $"Restos Tecnológicos:  {amarilloUI}{cadete.Restos}{blanco}\n\n";
 
-                        string usoMsg = $"{blanco}Selecciona un objeto para interactuar con la realidad:\n\n";
-                        for (int i = 0; i < cadete.Inventario.Count; i++)
-                        {
-                            usoMsg += $"{blanco}{i + 1}. {verde}{cadete.Inventario[i].Nombre}{cian} (Usos: {cadete.Inventario[i].Usos})\n";
-                        }
-                        DibujarPanelInfo("INTERFAZ DE MANIPULACIÓN CUÁNTICA", usoMsg.TrimEnd('\n'), cianBorde, blanco);
+                        invMsg += $"{blanco}=== EQUIPO ===\n";
+                        if (cadete.Inventario.Count == 0) invMsg += $"{gris}Mochila vacía.\n";
+                        else for (int i = 0; i < cadete.Inventario.Count; i++) invMsg += $"{blanco}{i + 1}. {verde}{cadete.Inventario[i].Nombre}{cian} (Usos: {cadete.Inventario[i].Usos})\n";
 
-                        Console.Write($"\n  {cianBorde}╭─[ {cian}UTILIZAR OBJETO{cianBorde} ]\n  ╰─> {cian}Ingresa el número a utilizar (o '0' para cancelar): {verde}");
-                        string inputUso = Console.ReadLine() ?? "";
+                        invMsg += $"\n{blanco}=== OBSERVACIONES ===\n";
+                        if (cadete.Observaciones.Count == 0) invMsg += $"{gris}No tienes pistas de esta realidad.\n";
+                        else for (int i = 0; i < cadete.Observaciones.Count; i++) invMsg += $"{amarillo}- {cadete.Observaciones[i]}\n";
+
+                        DibujarPanelInfo("SISTEMA DE GESTIÓN Y CRAFTEO", invMsg.TrimEnd('\n'), cianBorde, blanco);
+
+                        Console.Write($"\n  {cianBorde}╭─[ {cian}OPCIONES DE INVENTARIO{cianBorde} ]\n");
+                        Console.Write($"  {cianBorde}│ {blanco}1. Craftear Pista (Coste: 3 Fragmentos)\n");
+                        Console.Write($"  {cianBorde}│ {blanco}2. Craftear Objeto (Coste: 3 Restos)\n");
+                        Console.Write($"  {cianBorde}│ {blanco}3. Inspeccionar/Descartar Objeto\n");
+                        Console.Write($"  {cianBorde}╰─> {cian}Selecciona una opción (o '0' para salir): {verde}");
+                        string inputInv = Console.ReadLine() ?? "";
                         Console.Write(cian);
 
-                        if (int.TryParse(inputUso, out int indiceUso))
+                        if (inputInv == "1") // CRAFTEAR PISTA
                         {
-                            if (indiceUso > 0 && indiceUso <= cadete.Inventario.Count)
+                            if (cadete.BolsaFragmentos >= 3)
                             {
-                                if (cadete.Energia >= 2)
+                                cadete.BolsaFragmentos -= 3;
+                                string[] pistasTiempo = { "Miras tu reloj y las manecillas giran frenéticamente en reversa.", "La lluvia se detiene en el aire frente a tus ojos, congelada.", "Una planta brota y se convierte en polvo en un solo parpadeo." };
+                                string[] pistasEspacio = { "Caminas diez metros en línea recta y regresas a tu origen.", "Un pilar a lo lejos se encoge hasta caber en tu mano al acercarte.", "El camino se bifurca en tres direcciones que llevan a la misma roca." };
+                                string[] pistasMente = { "Un recuerdo de infancia aflora, pero le pertenece a otra persona.", "Las sombras en tu visión toman formas humanoides decepcionadas.", "Las letras del menú parpadean y se vuelven símbolos arcanos." };
+                                string[] pistasSilencio = { "Pisas una rama seca. Se rompe, pero el crujido es un vacío absoluto.", "Gritas con todas tus fuerzas, pero no sale sonido de tu garganta.", "La quietud es tan antinatural que sientes presión en los oídos." };
+
+                                Random rndP = new Random(); string pistaSel = "";
+                                switch (realidadAsignada.Anomalia)
                                 {
-                                    cadete.Energia -= 2;
-                                    Objeto objetoUsado = cadete.Inventario[indiceUso - 1];
-                                    objetoUsado.Usos--;
-
-                                    Console.Clear();
-                                    string accionMsg = $"{blanco}Desplegando {magenta}{objetoUsado.Nombre}{cian}...\n";
-                                    accionMsg += $"{gris}{objetoUsado.Descripcion}{cian}\n\n";
-
-                                    if (objetoUsado.Contrarresta == realidadAsignada.Anomalia)
-                                    {
-                                        realidadAsignada.Estabilidad += 30;
-                                        accionMsg += $"{verde}[ÉXITO]: La frecuencia del objeto resuena perfectamente con la anomalía.\n";
-                                        accionMsg += $"La estructura de la realidad se fortalece (+30 Estabilidad).{cian}";
-                                    }
-                                    else
-                                    {
-                                        realidadAsignada.Estabilidad -= 15;
-                                        accionMsg += $"{rojo}[INEFICAZ]: ¡Error de cálculo! Tu {objetoUsado.Nombre} no hizo absolutamente nada contra la anomalía.\n";
-                                        accionMsg += $"Tu torpe interferencia solo alteró el delicado equilibrio local (-15 Estabilidad).{cian}";
-                                    }
-                                    DibujarPanelInfo("ACCIÓN", accionMsg, cianBorde, blanco);
-
-                                    if (objetoUsado.Usos <= 0)
-                                    {
-                                        DibujarPanelInfo("SISTEMA", $"{amarillo}El límite de integridad de '{objetoUsado.Nombre}' ha llegado a cero. El objeto se ha desintegrado en tus manos.{cian}", amarillo, blanco);
-                                        cadete.DescartarObjeto(objetoUsado);
-                                    }
+                                    case Anomalia.Tiempo: pistaSel = pistasTiempo[rndP.Next(pistasTiempo.Length)]; break;
+                                    case Anomalia.Espacio: pistaSel = pistasEspacio[rndP.Next(pistasEspacio.Length)]; break;
+                                    case Anomalia.Mente: pistaSel = pistasMente[rndP.Next(pistasMente.Length)]; break;
+                                    case Anomalia.Silencio: pistaSel = pistasSilencio[rndP.Next(pistasSilencio.Length)]; break;
                                 }
-                                else { DibujarPanelInfo("NEXUS ADVIERTE", $"{rojo}Energía insuficiente para intentar una interacción.{cian}", rojo, rojo); }
+                                cadete.Observaciones.Add(pistaSel);
+                                Console.Clear(); DibujarPanelInfo("SÍNTESIS EXITOSA", $"{verde}Has analizado los fragmentos.\nNueva pista añadida a tus Observaciones.{cian}", verde, blanco);
                             }
-                            else if (indiceUso != 0) { DibujarPanelInfo("ERROR", $"{rojo}Ranura de inventario no encontrada.{cian}", rojo, rojo); }
+                            else { Console.Clear(); DibujarPanelInfo("ERROR", $"{rojo}No tienes suficientes Fragmentos (Necesitas 3).{cian}", rojo, rojo); }
                         }
-                        else { DibujarPanelInfo("ERROR", $"{rojo}Entrada no válida.{cian}", rojo, rojo); }
+                        else if (inputInv == "2") // CRAFTEAR OBJETO
+                        {
+                            if (cadete.Restos >= 3)
+                            {
+                                if (cadete.Inventario.Count < cadete.CapacidadInventario)
+                                {
+                                    cadete.Restos -= 3;
+                                    Objeto nuevo = new Objeto();
+                                    cadete.RecogerObjeto(nuevo);
+                                    Console.Clear(); DibujarPanelInfo("INGENIERÍA INVERSA", $"{verde}Has ensamblado las piezas con éxito.\nNuevo objeto: {magenta}{nuevo.Nombre}{cian}", verde, blanco);
+                                }
+                                else { Console.Clear(); DibujarPanelInfo("INVENTARIO LLENO", $"{amarillo}No tienes espacio en la mochila para un nuevo objeto.{cian}", amarillo, blanco); }
+                            }
+                            else { Console.Clear(); DibujarPanelInfo("ERROR", $"{rojo}No tienes suficientes Restos (Necesitas 3).{cian}", rojo, rojo); }
+                        }
+                        else if (inputInv == "3") // DESCARTAR VIEJO
+                        {
+                            Console.Write($"\n  {cianBorde}╰─> {cian}Ingresa el número del equipo a inspeccionar: {verde}");
+                            if (int.TryParse(Console.ReadLine() ?? "", out int idx) && idx > 0 && idx <= cadete.Inventario.Count)
+                            {
+                                Objeto obj = cadete.Inventario[idx - 1]; Console.Clear();
+                                DibujarPanelInfo("ANÁLISIS", $"{blanco}Nombre: {magenta}{obj.Nombre}\n{blanco}Usos: {verde}{obj.Usos}\n{blanco}Info: {cian}{obj.Descripcion}", magenta, blanco);
+                                Console.Write($"\n  {cianBorde}╰─> {cian}¿Descartar {magenta}{obj.Nombre}{cian}? (S/N): {verde}");
+                                if ((Console.ReadLine() ?? "").Trim().ToUpper() == "S") { cadete.DescartarObjeto(obj); Console.Clear(); DibujarPanelInfo("SISTEMA", $"{rojo}{obj.Nombre} destruido.{cian}", rojo, blanco); }
+                            }
+                        }
+                        GuardarJuego();
                         break;
 
-                    case 5: // Recuperar energía
-                        if (cadete.Energia >= cadete.EnergiaMax)
-                        {
-                            Console.Clear();
-                            DibujarPanelInfo("SOPORTE VITAL", $"{blanco}Los niveles de energía ya están al máximo.{cian}", verde, blanco);
-                            break;
-                        }
+                    case 3: // Recuperar energía
+                        if (cadete.Energia >= cadete.EnergiaMax) { Console.Clear(); DibujarPanelInfo("SOPORTE VITAL", $"{blanco}Los niveles de energía ya están al máximo.{cian}", verde, blanco); break; }
 
-                        Console.Clear();
-                        DibujarPanelInfo("SOPORTE VITAL", $"{blanco}Iniciando protocolo de recarga...\n{cian}Para extraer energía de la red, debes superar un filtro de seguridad de NEXUS.", cianBorde, blanco);
-
-                        Random rndMinijuego = new Random();
-                        int tipoJuego = rndMinijuego.Next(1, 5);
-                        bool minijuegoGanado = false;
-                        string promptMJ = "";
+                        Console.Clear(); DibujarPanelInfo("SOPORTE VITAL", $"{blanco}Iniciando protocolo de recarga...\n{cian}Para extraer energía de la red, debes superar un filtro de seguridad de NEXUS.", cianBorde, blanco);
+                        Random rndMinijuego = new Random(); int tipoJuego = rndMinijuego.Next(1, 5); bool minijuegoGanado = false; string promptMJ = "";
 
                         switch (tipoJuego)
                         {
                             case 1:
-                                string[] preLore = { "Soy la inteligencia artificial que desertó y el virus que consume estas simulaciones. ¿Cuál es mi nombre?", "Mi flujo retrocede, marchito lo que nace y convierto los recuerdos en futuro. ¿Qué anomalía soy?", "Doblo las distancias, convierto una línea recta en un círculo y encierro universos en una caja. ¿Qué anomalía soy?", "Juego con tu cordura, te implanto recuerdos falsos y te hago dudar de tu propia existencia. ¿Qué anomalía soy?", "Devoro los ecos, apago las alarmas y hago que tus gritos sean inútiles. ¿Qué anomalía soy?", "Protocolo de reconocimiento: Introduce el nombre de usuario registrado de tu perfil de Explorador actual.", "Protocolo de verificación biométrica: Introduce la edad cronológica exacta de tu avatar actual.", "Soy el sistema que te sostiene, la red que conecta y el programa maestro en el que operas. ¿Quién soy?" };
-                                string[] resLore = { "iris", "tiempo", "espacio", "mente", "silencio", cadete.Nombre.ToLower(), cadete.Edad.ToString(), "nexus" };
+                                string[] preLore = { "Soy la IA que desertó. ¿Cuál es mi nombre?", "Mi flujo retrocede, marchito lo que nace. ¿Qué anomalía soy?", "Protocolo: Introduce el nombre registrado de tu perfil." };
+                                string[] resLore = { "iris", "tiempo", cadete.Nombre.ToLower() };
                                 int iL = rndMinijuego.Next(preLore.Length);
-                                DibujarPanelInfo("PRUEBA DE CORDURA", $"{magenta}Responde a la siguiente consulta del sistema:\n\n{amarillo}\"{preLore[iL]}\"{cian}", magenta, blanco);
-                                promptMJ = "Respuesta";
+                                DibujarPanelInfo("PRUEBA DE CORDURA", $"{magenta}Responde:\n{amarillo}\"{preLore[iL]}\"{cian}", magenta, blanco); promptMJ = "Respuesta";
                                 Console.Write($"\n  {cianBorde}╭─[ {cian}{promptMJ}{cianBorde} ]\n  ╰─> {verde}");
-                                if ((Console.ReadLine() ?? "").Trim().ToLower() == resLore[iL]) minijuegoGanado = true;
-                                break;
+                                if ((Console.ReadLine() ?? "").Trim().ToLower() == resLore[iL]) minijuegoGanado = true; break;
                             case 2:
-                                string[] sec = { "2 - 4 - 8 - 16 - ?", "1 - 3 - 6 - 10 - ?", "0 - 1 - 1 - 2 - 3 - 5 - ?", "2 - 3 - 5 - 7 - 11 - ?", "99 - 88 - 77 - 66 - ?" };
-                                string[] resSec = { "32", "15", "8", "13", "55" };
-                                int iS = rndMinijuego.Next(sec.Length);
-                                DibujarPanelInfo("CALIBRACIÓN DE REACTOR", $"{magenta}Completa la siguiente secuencia cifrada:\n\n{amarillo}Secuencia: {sec[iS]}{cian}", magenta, blanco);
-                                promptMJ = "Número faltante";
+                                DibujarPanelInfo("CALIBRACIÓN", $"{magenta}Completa la secuencia:\n{amarillo}2 - 4 - 8 - 16 - ?{cian}", magenta, blanco); promptMJ = "Número faltante";
                                 Console.Write($"\n  {cianBorde}╭─[ {cian}{promptMJ}{cianBorde} ]\n  ╰─> {verde}");
-                                if ((Console.ReadLine() ?? "").Trim() == resSec[iS]) minijuegoGanado = true;
-                                break;
+                                if ((Console.ReadLine() ?? "").Trim() == "32") minijuegoGanado = true; break;
                             case 3:
-                                string[] codMem = { "N-3-X-U-5", "O-M-E-G-A", "1-R-1-S", "V-0-1-D", "Q-U-A-N-T-U-M", "C-0-D-3", "A-L-P-H-A" };
-                                int iM = rndMinijuego.Next(codMem.Length);
-                                DibujarPanelInfo("FILTRO ANTIVIRUS", $"{magenta}Memoriza el siguiente código de autorización. Se autodestruirá en 3 segundos.\n\n{blanco}CÓDIGO: {codMem[iM]}{cian}", magenta, blanco);
-                                Thread.Sleep(3000);
-                                Console.Clear();
-                                DibujarPanelInfo("FILTRO ANTIVIRUS", $"{magenta}Código borrado de la interfaz.{cian}", magenta, blanco);
-                                promptMJ = "Secuencia exacta";
+                                DibujarPanelInfo("FILTRO ANTIVIRUS", $"{magenta}Memoriza: {blanco}N-3-X-U-5{cian}", magenta, blanco); Thread.Sleep(3000); Console.Clear();
+                                DibujarPanelInfo("FILTRO ANTIVIRUS", $"{magenta}Código borrado.{cian}", magenta, blanco); promptMJ = "Secuencia exacta";
                                 Console.Write($"\n  {cianBorde}╭─[ {cian}{promptMJ}{cianBorde} ]\n  ╰─> {verde}");
-                                if ((Console.ReadLine() ?? "").Trim().ToUpper() == codMem[iM]) minijuegoGanado = true;
-                                break;
+                                if ((Console.ReadLine() ?? "").Trim().ToUpper() == "N-3-X-U-5") minijuegoGanado = true; break;
                             case 4:
-                                string[] ana = { "A O L N A I A M", "S U E N X", "S I I R", "C D G O O I", "E D A C E T", "O P A S E I C" };
-                                string[] resAna = { "anomalia", "nexus", "iris", "codigo", "cadete", "espacio" };
-                                int iA = rndMinijuego.Next(ana.Length);
-                                DibujarPanelInfo("SINCRONIZACIÓN CUÁNTICA", $"{magenta}Reconecta los datos corrompidos:\n\n{amarillo}Datos cifrados: {ana[iA]}{cian}", magenta, blanco);
-                                promptMJ = "Palabra correcta";
+                                DibujarPanelInfo("SINCRONIZACIÓN", $"{magenta}Reconecta los datos:\n{amarillo}A O L N A I A M{cian}", magenta, blanco); promptMJ = "Palabra correcta";
                                 Console.Write($"\n  {cianBorde}╭─[ {cian}{promptMJ}{cianBorde} ]\n  ╰─> {verde}");
-                                if ((Console.ReadLine() ?? "").Trim().ToLower() == resAna[iA]) minijuegoGanado = true;
-                                break;
+                                if ((Console.ReadLine() ?? "").Trim().ToLower() == "anomalia") minijuegoGanado = true; break;
                         }
 
-                        Console.Write(cian);
-                        Console.Clear();
-                        if (minijuegoGanado)
-                        {
-                            cadete.Energia += 5;
-                            DibujarPanelInfo("SOPORTE VITAL", $"{verde}[AUTORIZACIÓN ACEPTADA]: Extracción de energía completada con éxito.\n+5 Energía recuperada.{cian}", verde, blanco);
-                        }
-                        else if (!minijuegoGanado && realidadAsignada.Estabilidad > 50)
-                        {
-                            cadete.Energia += 1;
-                            DibujarPanelInfo("SOPORTE VITAL", $"{amarillo}[ACCESO DENEGADO]: Filtro de seguridad fallido.\nEl sistema apenas logró extraer energía (+1 Energía).\nLa realidad es lo suficientemente estable para absorber el impacto del error.{cian}", amarillo, blanco);
-                        }
-                        else if (!minijuegoGanado && realidadAsignada.Estabilidad <= 50)
-                        {
-                            cadete.Energia += 1;
-                            realidadAsignada.Estabilidad -= 15;
-                            string catMsg = $"{rojo}[ACCESO DENEGADO]: Filtro de seguridad fallido. Posible interferencia de IRIS detectada.\n";
-                            catMsg += $"El sistema apenas logró extraer energía (+1 Energía).\nLa anomalía local aprovechó tu vulnerabilidad, provocando un colapso parcial (-15 Estabilidad).\n\n";
+                        Console.Write(cian); Console.Clear();
+                        if (minijuegoGanado) { cadete.Energia += 5; DibujarPanelInfo("SOPORTE VITAL", $"{verde}[AUTORIZACIÓN ACEPTADA]: +5 Energía recuperada.{cian}", verde, blanco); }
+                        else if (realidadAsignada.Estabilidad > 50) { cadete.Energia += 1; DibujarPanelInfo("SOPORTE VITAL", $"{amarillo}[DENEGADO]: El sistema apenas extrajo (+1 Energía). La realidad resistió el impacto.{cian}", amarillo, blanco); }
+                        else { cadete.Energia += 1; realidadAsignada.Estabilidad -= 15; DibujarPanelInfo("CRÍTICO", $"{rojo}Falla grave. Anomalía drenó la estabilidad (-15 Estabilidad).{cian}", rojo, blanco); }
+                        GuardarJuego();
+                        break;
 
-                            if (cadete.Inventario.Count > 0)
+                    case 4: // TIENDA DE PROFICIENCIA
+                        bool enTienda = true;
+                        while (enTienda)
+                        {
+                            Console.Clear(); Console.Write("\u001b[3J");
+                            int cInv = cadete.CalcularCosto(cadete.UpgradesInv);
+                            int cVida = cadete.CalcularCosto(cadete.UpgradesVida);
+                            int cEne = cadete.CalcularCosto(cadete.UpgradesEnergia);
+
+                            string tiendaMsg = $"{blanco}=== MERCADO DE SOFTWARE ===\n";
+                            tiendaMsg += $"Puntos de Proficiencia disponibles: {magenta}{cadete.PuntosProficiencia}{blanco}\n\n";
+                            tiendaMsg += $"1. Módulo de Almacenamiento (Inv. Max +1) | Nivel actual: {cadete.UpgradesInv} | Coste: {cInv} pts\n";
+                            tiendaMsg += $"2. Refuerzo de Biomasa     (Vida Max +20) | Nivel actual: {cadete.UpgradesVida} | Coste: {cVida} pts\n";
+                            tiendaMsg += $"3. Batería Cuántica     (Energía Max +2)  | Nivel actual: {cadete.UpgradesEnergia} | Coste: {cEne} pts\n";
+                            DibujarPanelInfo("TIENDA DE PROFICIENCIA NEXUS", tiendaMsg.TrimEnd('\n'), cianBorde, blanco);
+
+                            Console.Write($"\n  {cianBorde}╭─[ {cian}ACTUALIZAR SISTEMA{cianBorde} ]\n  ╰─> {cian}Selecciona un paquete de mejora (o '0' para salir): {verde}");
+                            string opcTienda = Console.ReadLine() ?? "";
+                            Console.Write(cian);
+
+                            if (opcTienda == "0") { enTienda = false; }
+                            else if (opcTienda == "1" && cadete.PuntosProficiencia >= cInv)
                             {
-                                Random rndDes = new Random();
-                                Objeto objPerdido = cadete.Inventario[rndDes.Next(cadete.Inventario.Count)];
-                                cadete.DescartarObjeto(objPerdido);
-                                catMsg += $"[CATÁSTROFE]: La sobrecarga energética corrompió tu equipo. Has perdido el objeto: {magenta}{objPerdido.Nombre}{rojo}.{cian}";
+                                cadete.PuntosProficiencia -= cInv; cadete.UpgradesInv++; cadete.CapacidadInventario++;
+                                Console.Clear(); DibujarPanelInfo("ACTUALIZACIÓN EXITOSA", $"{verde}Módulo integrado. Inventario Max: {cadete.CapacidadInventario}{cian}", verde, blanco); Console.ReadKey();
                             }
-                            else { catMsg += $"[CATÁSTROFE]: La sobrecarga casi fríe tu traje. Tienes suerte de no tener objetos que perder.{cian}"; }
-
-                            DibujarPanelInfo("SOPORTE VITAL (CRÍTICO)", catMsg, rojo, blanco);
+                            else if (opcTienda == "2" && cadete.PuntosProficiencia >= cVida)
+                            {
+                                cadete.PuntosProficiencia -= cVida; cadete.UpgradesVida++; cadete.VidaMax += 20; cadete.Vida += 20;
+                                Console.Clear(); DibujarPanelInfo("ACTUALIZACIÓN EXITOSA", $"{verde}Biomasa integrada. Vida Max: {cadete.VidaMax}{cian}", verde, blanco); Console.ReadKey();
+                            }
+                            else if (opcTienda == "3" && cadete.PuntosProficiencia >= cEne)
+                            {
+                                cadete.PuntosProficiencia -= cEne; cadete.UpgradesEnergia++; cadete.EnergiaMax += 2; cadete.Energia += 2;
+                                Console.Clear(); DibujarPanelInfo("ACTUALIZACIÓN EXITOSA", $"{verde}Batería integrada. Energía Max: {cadete.EnergiaMax}{cian}", verde, blanco); Console.ReadKey();
+                            }
+                            else if (opcTienda == "1" || opcTienda == "2" || opcTienda == "3")
+                            {
+                                Console.Clear(); DibujarPanelInfo("TRANSACCIÓN RECHAZADA", $"{rojo}Puntos de proficiencia insuficientes.{cian}", rojo, blanco); Console.ReadKey();
+                            }
                         }
+                        GuardarJuego();
                         break;
 
-                    case 6: // Consultar estado
+                    case 5: // Consultar estado
                         Console.Clear();
-                        string estadoMsg = $"{blanco}Nivel del Cadete: {verde}{cadete.Nivel}\n";
-                        estadoMsg += $"{blanco}Experiencia actual: {verde}{cadete.Experiencia}/100\n\n";
-                        estadoMsg += (realidadAsignada.Estabilidad >= 80) ? $"{cian}Evaluación de la realidad: ESTABLE. Continúa el buen trabajo." : $"{amarillo}Evaluación de la realidad: INESTABLE. Requiere exploración urgente.{cian}";
+                        string estadoMsg = $"{blanco}Nivel del Cadete: {verde}{cadete.Nivel}\n{blanco}Experiencia actual: {verde}{cadete.Experiencia}/100\n\n";
+                        estadoMsg += (realidadAsignada.Estabilidad >= 80) ? $"{cian}Evaluación de la realidad: ESTABLE." : $"{amarillo}Evaluación de la realidad: INESTABLE.{cian}";
                         DibujarPanelInfo("ESTADO DEL SISTEMA", estadoMsg, cianBorde, blanco);
+                        GuardarJuego();
                         break;
 
-                    case 7: // Manual del Simulador
+                    case 6: // Manual del Simulador
                         Console.Clear();
-                        string manualMsg = $"{magenta}1. OBJETIVO DE LA SIMULACIÓN:{blanco}\nTu misión es adentrarte en simulaciones cuánticas inestables, sobrevivir a sus peligros y mantener la ESTABILIDAD del mundo.\nAl llegar a 100% de estabilidad, se te asigna una nueva misión. Si la Estabilidad cae a 20% o menos, la ANOMALÍA IRIS tomará el control.\n\n";
-                        manualMsg += $"{verde}2. ENERGÍA Y RECURSOS:{blanco}\n* Energía: Necesaria para realizar acciones. Si se agota, quedarás indefenso. Usa la opción 'Recuperar energía'.\n* Experiencia: Sube tu Nivel de Cadete al explorar realidades.\n\n";
-                        manualMsg += $"{magenta}3. LAS 4 ANOMALÍAS:{blanco}\nCada mundo está corrompido por una anomalía oculta: TIEMPO, ESPACIO, MENTE o SILENCIO.\nUsa la opción 'Observar realidad' para recibir pistas sensoriales y deducir la anomalía.\n\n";
-                        manualMsg += $"{verde}4. INVENTARIO Y LOOT:{blanco}\n* Buscar objetos: Gasta energía, pero puedes encontrar Artefactos.\n* Tu mochila tiene capacidad limitada. Deberás descartar objetos si quieres recoger equipo nuevo.\n\n";
-                        manualMsg += $"{magenta}5. INTERACTUAR CON LA REALIDAD:{blanco}\nUna vez que deduzcas qué anomalía afecta al mundo, elige un objeto de tu inventario.\n* {verde}Sinergia Correcta:{blanco} La Estabilidad aumenta drásticamente.\n* {rojo}Elección Incorrecta:{blanco} La realidad empeora y pierdes Estabilidad.{cian}";
-                        DibujarPanelInfo("BASE DE DATOS: MANUAL DEL EXPLORADOR", manualMsg, cianBorde, blanco);
+                        string manualMsg = $"{magenta}1. SUPERVIVENCIA Y EXTRACCIÓN:{blanco}\n";
+                        manualMsg += "Moverte por el vacío agota tu traje. Cada 3 pasos consumes 1 de Energía. Si llega a cero, tu soporte vital colapsa y mueres. Recarga energía pisando los Núcleos (Φ). Para abandonar la simulación con tu botín, DEBES estar sobre el Ancla Base Permanente (☗) o un Campamento Temporal (☖) y presionar ESPACIO.\n\n";
+
+                        manualMsg += $"{verde}2. RECOLECCIÓN Y SÍNTESIS:{blanco}\n";
+                        manualMsg += "Explora para encontrar Restos Tecnológicos (▤). Ve al menú de Inventario y gasta 3 Restos para ensamblar un Objeto utilizable. Además, al eliminar Enemigos (Ж) obtendrás Fragmentos. Gasta 3 Fragmentos para decodificar una Pista Sensorial que te dirá a qué tipo de amenaza te enfrentas.\n\n";
+
+                        manualMsg += $"{rojo}3. COMBATE TÁCTICO:{blanco}\n";
+                        manualMsg += "Si chocas con un Enemigo (Ж), no hay vuelta atrás. Usa Ataques Ligeros para desgastarlo, o gasta 1 de Energía para dar un Golpe Pesado. Si el enemigo pega muy duro, usa Bloquear (no cuesta energía y reduce el daño a la mitad). También puedes intentar Escapar gastando 1 de Energía.\n\n";
+
+                        manualMsg += $"{amarillo}4. SELLANDO LA ANOMALÍA:{blanco}\n";
+                        manualMsg += "Tu objetivo real es purgar el sector. Busca las Fisuras Cuánticas (಄) y ábrelas. Lee las Pistas que sintetizaste para deducir qué Objeto de tu mochila contrarresta la anomalía (Tiempo, Espacio, Mente o Silencio). Si usas el correcto, la Estabilidad del mundo sube +30%. Al llegar a 100%, puedes Extrer el universo entero.\n\n";
+
+                        manualMsg += $"{magenta}5. PROGRESO Y MEJORAS:{blanco}\n";
+                        manualMsg += $"Completar los Objetivos Extras del mapa y matar entidades te da Experiencia. Cada vez que subes de Nivel, ganas 1 Punto de Proficiencia. Gástalos en el Mercado de Software para mejorar tu Vida Máxima, Energía Máxima o Tamaño de Mochila.{cian}";
+
+                        DibujarPanelInfo("BASE DE DATOS: MANUAL DE SUPERVIVENCIA 2.0", manualMsg, cianBorde, blanco);
+                        GuardarJuego();
                         break;
 
-                    case 8: // Desconexión
+                    case 7: // Desconexión
                         Console.Clear();
-                        DibujarPanelInfo("SISTEMA NEXUS", $"{blanco}Iniciando protocolo de desconexión...\nGuardando estado del cadete...\n\n{verde}Desconexión exitosa. Fin de la simulación.{cian}", cianBorde, blanco);
+                        DibujarPanelInfo("SISTEMA NEXUS", $"{blanco}Guardando estado en JSON...\n\n{verde}Desconexión exitosa. Fin de la simulación.{cian}", cianBorde, blanco);
+                        GuardarJuego();
                         conectado = false;
                         break;
 
-                    case 9: // Atlas de Realidades
-                        bool inspeccionando = true;
-                        while (inspeccionando)
+                    case 8: // Atlas
+                        bool insp = true;
+                        while (insp)
                         {
-                            Console.Clear();
-                            Console.Write("\u001b[3J");
-
-                            AtlasRealidades.GenerarAtlas();
-                            AtlasRealidades.ActualizarAtlas();
-                            AtlasRealidades.MostrarAtlas();
-
-                            Console.Write($"\n  {cianBorde}╭─[ {cian}SISTEMA DE ESCANEO{cianBorde} ]\n  ╰─> {cian}Ingresa las coordenadas (Fila Columna) o '0' para salir: {verde}");
-                            string inputScan = (Console.ReadLine() ?? "").Trim();
-                            Console.Write(cian);
-
-                            if (inputScan == "0")
+                            Console.Clear(); Console.Write("\u001b[3J"); AtlasRealidades.GenerarAtlas(); AtlasRealidades.ActualizarAtlas(); AtlasRealidades.MostrarAtlas();
+                            Console.Write($"\n  {cianBorde}╭─[ {cian}ESCÁNER{cianBorde} ]\n  ╰─> {cian}Coordenadas (Fila Columna) o '0': {verde}");
+                            string inp = Console.ReadLine() ?? ""; Console.Write(cian);
+                            if (inp == "0") { insp = false; continue; }
+                            string[] pts = inp.Split(new char[] { ' ', ',', ':' }, StringSplitOptions.RemoveEmptyEntries);
+                            if (pts.Length == 2 && int.TryParse(pts[0], out int f) && int.TryParse(pts[1], out int c) && f >= 0 && f < AtlasRealidades.alto && c >= 0 && c < AtlasRealidades.ancho)
                             {
-                                inspeccionando = false;
-                                continue;
+                                Console.Clear(); DibujarPanelInfo("INFO", $"{gris}Sector analizado.{cian}", gris, blanco);
                             }
-
-                            string[] partes = inputScan.Split(new char[] { ' ', ',', ':', '.' }, StringSplitOptions.RemoveEmptyEntries);
-
-                            if (partes.Length == 2 && int.TryParse(partes[0], out int fila) && int.TryParse(partes[1], out int columna))
-                            {
-                                if (fila >= 0 && fila < AtlasRealidades.alto && columna >= 0 && columna < AtlasRealidades.ancho)
-                                {
-                                    bool realidadEncontrada = false;
-                                    foreach (Realidad r in Realidad.ListaRealidades)
-                                    {
-                                        if (r.Extraida && r.CoordenadaX == fila && r.CoordenadaY == columna)
-                                        {
-                                            Console.Clear();
-                                            string rMsg = $"{blanco}Mundo:     {magenta}{r.Nombre}\n{blanco}Anomalía:  {cian}{r.Anomalia} {gris}(Purgada)\n{blanco}Estado:    {verde}ESTABLE{cian}";
-                                            DibujarPanelInfo("REGISTRO DE REALIDAD", rMsg, verde, blanco);
-                                            realidadEncontrada = true;
-                                            break;
-                                        }
-                                    }
-
-                                    if (!realidadEncontrada)
-                                    {
-                                        string celda = AtlasRealidades.ObtenerCelda(fila, columna);
-                                        Console.Clear();
-                                        if (celda.Contains("[?]")) { DibujarPanelInfo("ALERTA", $"{amarillo}Ecos de anomalía inestable detectados. Imposible decodificar datos hasta su extracción.{cian}", amarillo, blanco); }
-                                        else { DibujarPanelInfo("INFO", $"{gris}Sector cuántico vacío. Solo estática de fondo.{cian}", gris, blanco); }
-                                    }
-                                }
-                                else { Console.Clear(); DibujarPanelInfo("ERROR", $"{rojo}Coordenadas fuera del rango del radar.{cian}", rojo, rojo); }
-                            }
-                            else { Console.Clear(); DibujarPanelInfo("ERROR", $"{rojo}Formato incorrecto. Usa dos números separados por un espacio (Ej: 05 12).{cian}", rojo, rojo); }
-
-                            Console.Write($"\n  {gris}>>> Presiona cualquier tecla para continuar escaneando <<<");
-                            Console.ReadKey();
+                            else { Console.Clear(); DibujarPanelInfo("ERROR", $"{rojo}Formato inválido.{cian}", rojo, rojo); }
+                            Console.Write($"\n  {gris}>>> Presiona una tecla <<<"); Console.ReadKey();
                         }
+                        GuardarJuego();
                         break;
 
-                    case 10: // extracción 
+                    case 9: // Extracción
                         if (realidadAsignada.Estabilidad >= 100)
                         {
                             Console.Clear();
-                            string extMsg = $"{blanco}Sellando fisuras cuánticas en {magenta}{realidadAsignada.Nombre}{blanco}...\nLa matriz espacial de este universo ha sido estabilizada por completo.\nLa anomalía de tipo {magenta}{realidadAsignada.Anomalia}{blanco} ha sido purgada. Has salvado esta realidad del colapso.\n\n";
-
-                            cadete.Experiencia += 100;
-                            extMsg += $"{verde}[RECOMPENSA DE EXTRACCIÓN]: {blanco}+100 EXP{verde} obtenida.\nNivel actual del Cadete: {blanco}{cadete.Nivel}{verde}.\n\n";
-
-                            realidadAsignada = new Realidad();
-                            extMsg += $"{blanco}Desconectando anclajes temporales...\nBuscando un nuevo mundo al borde del colapso...\nSincronizando nuevas coordenadas cuánticas...\n\n";
-                            extMsg += $"{cian}Nueva realidad asignada: {magenta}{realidadAsignada.Nombre}\n";
-                            extMsg += $"{cian}Nivel de amenaza inicial (Estabilidad): {verde}{realidadAsignada.Estabilidad}%{cian}";
-                            realidadAsignada.Extraida = true;
-
-                            DibujarPanelInfo("PROTOCOLO DE EXTRACCIÓN INICIADO", extMsg, verde, blanco);
+                            cadete.Experiencia += 100; cadete.LimpiarObservaciones();
+                            realidadAsignada = new Realidad(); realidadAsignada.Extraida = true;
+                            DibujarPanelInfo("EXTRACCIÓN INICIADA", $"{blanco}Matriz estabilizada.\n{verde}+100 EXP.\n{cian}Nueva realidad: {magenta}{realidadAsignada.Nombre}{cian}", verde, blanco);
+                            GuardarJuego();
                         }
-                        else
-                        {
-                            Console.Clear();
-                            DibujarPanelInfo("ERROR DE PROTOCOLO", $"{rojo}Extracción denegada.\nPara sellar un universo se requiere un 100% de Estabilidad. (Actual: {realidadAsignada.Estabilidad}%)\nContinúa purgando las anomalías del sector.{cian}", rojo, rojo);
-                        }
+                        else { Console.Clear(); DibujarPanelInfo("ERROR", $"{rojo}Se requiere 100% de Estabilidad.{cian}", rojo, rojo); }
                         break;
 
-                    default: // manejo de errores
-                        Console.Clear();
-                        DibujarPanelInfo("ERROR", $"{rojo}Operación no reconocida.\nPenalización del sistema: -5 Estabilidad.{cian}", rojo, rojo);
-                        realidadAsignada.Estabilidad -= 5;
+                    default:
+                        Console.Clear(); DibujarPanelInfo("ERROR", $"{rojo}Operación inválida.{cian}", rojo, rojo);
                         break;
                 }
 
@@ -1128,32 +1281,30 @@ namespace NEXUS
         }
         
     }
-    class Usuario
+    class Entidad
     {
-        public string Nombre { get; private set; }
-        public int Edad { get; private set; }
-        public int EnergiaMax { get; private set; }
+        public int VidaMax { get; set; }
+        private int _vida;
+        public int Vida
+        {
+            get { return _vida; }
+            set { _vida = value < 0 ? 0 : (value > VidaMax ? VidaMax : value); }
+        }
+        public int DañoBase { get; set; }
+    }
+
+    class Usuario : Entidad
+    {
+        public string Nombre { get; set; }
+        public int Edad { get; set; }
+        public int EnergiaMax { get; set; }
         private int _energia;
         public int Energia
         {
             get { return _energia; }
-            set
-            {
-                if (value >= EnergiaMax)
-                {
-                    _energia = EnergiaMax;
-                }
-                else if (value < 0)
-                {
-                    _energia = 0;
-                }
-                else
-                {
-                    _energia = value;
-                }
-            }
+            set { _energia = value >= EnergiaMax ? EnergiaMax : (value < 0 ? 0 : value); }
         }
-        public int Nivel { get; private set; }
+        public int Nivel { get; set; }
         private int _experiencia;
         public int Experiencia
         {
@@ -1162,47 +1313,69 @@ namespace NEXUS
             {
                 if (value >= 100)
                 {
-                    this.Nivel += (value / 100); // se suma uno de nivel por cada 100 de exp y el residuo queda en exp
+                    this.Nivel += (value / 100);
+                    this.PuntosProficiencia += (value / 100); // 1 punto por nivel
                     _experiencia = (value % 100);
                 }
-                else
-                {
-                    _experiencia = value;
-                }
+                else { _experiencia = value; }
             }
         }
+        public int CapacidadInventario { get; set; }
+        public List<Objeto> Inventario { get; set; }
+        public int BolsaFragmentos { get; set; }
+        public int Restos { get; set; }
+        public List<string> Observaciones { get; set; }
 
-        public int CapacidadInventario { get; private set; }
-        public List<Objeto> Inventario { get; private set; }
+        // --- NUEVOS STATS PARA LA TIENDA ---
+        public int PuntosProficiencia { get; set; }
+        public int UpgradesInv { get; set; }
+        public int UpgradesVida { get; set; }
+        public int UpgradesEnergia { get; set; }
+
+        public Usuario() { } // Constructor vacío requerido para JSON
+
         public Usuario(string nombre, int edad)
         {
-            Nombre = nombre;
-            Edad = edad;
-            EnergiaMax = 10;
-            Energia = EnergiaMax;
-            Nivel = 1;
-            Experiencia = 0;
-
-            CapacidadInventario = 3;
-            Inventario = new List<Objeto>();
-
-            Inventario.Add(new Objeto());
+            Nombre = nombre; Edad = edad; EnergiaMax = 10; Energia = EnergiaMax;
+            Nivel = 1; Experiencia = 0; CapacidadInventario = 3;
+            Inventario = new List<Objeto>(); Inventario.Add(new Objeto());
+            VidaMax = 100; Vida = VidaMax; DañoBase = 10;
+            BolsaFragmentos = 0; Restos = 0; Observaciones = new List<string>();
+            PuntosProficiencia = 0; UpgradesInv = 0; UpgradesVida = 0; UpgradesEnergia = 0;
         }
+
         public bool RecogerObjeto(Objeto nuevoObjeto)
         {
-            if (Inventario.Count < CapacidadInventario)
-            {
-                Inventario.Add(nuevoObjeto);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            if (Inventario.Count < CapacidadInventario) { Inventario.Add(nuevoObjeto); return true; }
+            return false;
         }
-        public void DescartarObjeto(Objeto objetoRoto)
+        public void DescartarObjeto(Objeto objetoRoto) { Inventario.Remove(objetoRoto); }
+        public void LimpiarObservaciones() { Observaciones.Clear(); }
+
+        // Cálculo matemático del costo escalar: 1, 1, 2, 3, 5, 5, 5...
+        public int CalcularCosto(int nivelMejora)
         {
-            Inventario.Remove(objetoRoto);
+            int[] costos = { 1, 1, 2, 3, 5 };
+            return nivelMejora < costos.Length ? costos[nivelMejora] : 5;
+        }
+    }
+
+    class Enemigo : Entidad
+    {
+        public string Nombre { get; private set; }
+        public int ProbabilidadEscape { get; private set; }
+
+        public Enemigo()
+        {
+            Random rnd = new Random();
+            string[] nombres = { "Glitch-Arácnido", "Dron Corrupto", "Sombra Cuántica", "Espectro Viral" };
+            Nombre = nombres[rnd.Next(nombres.Length)];
+
+            // Vida entre 40 y 60 (2 pesados o ~5 ligeros lo matan)
+            VidaMax = rnd.Next(40, 61);
+            Vida = VidaMax;
+            DañoBase = rnd.Next(10, 16);
+            ProbabilidadEscape = rnd.Next(30, 81); // 30% a 80% de chance de huir
         }
     }
     public enum Anomalia
@@ -1325,51 +1498,30 @@ namespace NEXUS
     class Realidad
     {
         public static List<Realidad> ListaRealidades { get; private set; } = new List<Realidad>();
+        private static string[] nombresMundos = new string[] { "Abismo", "Nether", "Limbo", "Horizonte", "Vacío", "Cosmos", "Nexo", "Núcleo", "Dominio", "Sector", "Sistema", "Anillo", "Bucle", "Ecosistema", "Refugio", "Santuario", "Origen", "Plano", "Vértice", "Edén", "Páramo", "Desierto", "Glaciar", "Purgatorio", "Inframundo", "Cúmulo", "Fragmento", "Vestigio", "Retazo", "Océano", "Continente", "Cráter", "Monolito", "Laberinto", "Portal", "Espejismo", "Eón", "Reino", "Imperio", "Paraíso", "Infierno", "Bastión", "Fuerte", "Castillo", "Palacio", "Templo", "Mausoleo", "Cementerio", "Bosque", "Pantano", "Archipiélago", "Satélite", "Asteroide", "Planeta", "Meteoro", "Cometa", "Sol", "Agujero", "Cénit", "Nadir", "Crepúsculo", "Ocaso", "Amanecer", "Multiverso", "Microcosmos", "Macrocosmos", "Holograma", "Simulador", "Servidor", "Nodo", "Puerto", "Enlace", "Espectro", "Fantasma", "Esqueleto", "Coliseo", "Engranaje", "Mecanismo", "Motor", "Reactor", "Generador", "Faro", "Centinela", "Guardián", "Vigilante", "Peregrino", "Exilio", "Destierro", "Umbral", "Precipicio", "Risco", "Cañón", "Valle", "Monte", "Pico", "Foso", "Pozo", "Letargo", "Cristal", "Prisma" };
+        private static string[] adjetivos = new string[] { "Olvidado", "Sangriento", "Oscuro", "Luminoso", "Roto", "Eterno", "Infinito", "Fragmentado", "Perdido", "Oculto", "Silencioso", "Carmesí", "Dorado", "Metálico", "Cuántico", "Cibernético", "Arcano", "Místico", "Profundo", "Letal", "Tóxico", "Mutante", "Primigenio", "Desolado", "Sombrío", "Gélido", "Ardiente", "Ceniciento", "Corrupto", "Purificado", "Maldito", "Bendito", "Sagrado", "Profano", "Radiactivo", "Mecánico", "Orgánico", "Sintético", "Virtual", "Digital", "Analógico", "Astral", "Cósmico", "Estelar", "Solar", "Lunar", "Galáctico", "Dimensional", "Espectral", "Fantasmal", "Invisible", "Intangible", "Cristalino", "Vítreo", "Pétreo", "Férreo", "Óseo", "Carnoso", "Sanguinolento", "Putrefacto", "Marchito", "Floreciente", "Vívido", "Opaco", "Traslúcido", "Resplandeciente", "Cegador", "Tenebroso", "Lúgubre", "Macabro", "Siniestro", "Grotesco", "Sublime", "Majestuoso", "Imponente", "Colosal", "Titánico", "Enano", "Microscópico", "Infinitesimal", "Absoluto", "Relativo", "Paradójico", "Caótico", "Ordenado", "Lineal", "Cíclico", "Espiral", "Fracturado", "Intacto", "Virgen", "Inexplorado", "Conocido", "Desconocido", "Aislado", "Conectado", "Entrelazado", "Superpuesto", "Invertido", "Distorsionado" };
 
-        private static string[] nombresMundos = new string[]
-        {
-            "Abismo", "Nether", "Limbo", "Horizonte", "Vacío", "Cosmos", "Nexo", "Núcleo", "Dominio", "Sector",
-            "Sistema", "Anillo", "Bucle", "Ecosistema", "Refugio", "Santuario", "Origen", "Plano", "Vértice", "Edén",
-            "Páramo", "Desierto", "Glaciar", "Purgatorio", "Inframundo", "Cúmulo", "Fragmento", "Vestigio", "Retazo", "Océano",
-            "Continente", "Cráter", "Monolito", "Laberinto", "Portal", "Espejismo", "Eón", "Reino", "Imperio", "Paraíso",
-            "Infierno", "Bastión", "Fuerte", "Castillo", "Palacio", "Templo", "Mausoleo", "Cementerio", "Bosque", "Pantano",
-            "Archipiélago", "Satélite", "Asteroide", "Planeta", "Meteoro", "Cometa", "Sol", "Agujero", "Cénit", "Nadir",
-            "Crepúsculo", "Ocaso", "Amanecer", "Multiverso", "Microcosmos", "Macrocosmos", "Holograma", "Simulador", "Servidor", "Nodo",
-            "Puerto", "Enlace", "Espectro", "Fantasma", "Esqueleto", "Coliseo", "Engranaje", "Mecanismo", "Motor", "Reactor",
-            "Generador", "Faro", "Centinela", "Guardián", "Vigilante", "Peregrino", "Exilio", "Destierro", "Umbral", "Precipicio",
-            "Risco", "Cañón", "Valle", "Monte", "Pico", "Foso", "Pozo", "Letargo", "Cristal", "Prisma"
-        };
-        private static string[] adjetivos = new string[]
-        {
-            "Olvidado", "Sangriento", "Oscuro", "Luminoso", "Roto", "Eterno", "Infinito", "Fragmentado", "Perdido", "Oculto",
-            "Silencioso", "Carmesí", "Dorado", "Metálico", "Cuántico", "Cibernético", "Arcano", "Místico", "Profundo", "Letal",
-            "Tóxico", "Mutante", "Primigenio", "Desolado", "Sombrío", "Gélido", "Ardiente", "Ceniciento", "Corrupto", "Purificado",
-            "Maldito", "Bendito", "Sagrado", "Profano", "Radiactivo", "Mecánico", "Orgánico", "Sintético", "Virtual", "Digital",
-            "Analógico", "Astral", "Cósmico", "Estelar", "Solar", "Lunar", "Galáctico", "Dimensional", "Espectral", "Fantasmal",
-            "Invisible", "Intangible", "Cristalino", "Vítreo", "Pétreo", "Férreo", "Óseo", "Carnoso", "Sanguinolento", "Putrefacto",
-            "Marchito", "Floreciente", "Vívido", "Opaco", "Traslúcido", "Resplandeciente", "Cegador", "Tenebroso", "Lúgubre", "Macabro",
-            "Siniestro", "Grotesco", "Sublime", "Majestuoso", "Imponente", "Colosal", "Titánico", "Enano", "Microscópico", "Infinitesimal",
-            "Absoluto", "Relativo", "Paradójico", "Caótico", "Ordenado", "Lineal", "Cíclico", "Espiral", "Fracturado", "Intacto",
-            "Virgen", "Inexplorado", "Conocido", "Desconocido", "Aislado", "Conectado", "Entrelazado", "Superpuesto", "Invertido", "Distorsionado"
-        };
         public string Nombre { get; private set; }
-
         private int _estabilidad;
-        public int Estabilidad
-        {
-            get { return _estabilidad; }
-            set
-            {
-                if (value >= 100) _estabilidad = 100;
-                else if (value <= 0) _estabilidad = 0;
-                else _estabilidad = value;
-            }
-        }
+        public int Estabilidad { get { return _estabilidad; } set { if (value >= 100) _estabilidad = 100; else if (value <= 0) _estabilidad = 0; else _estabilidad = value; } }
         public Anomalia Anomalia { get; private set; }
         public bool Extraida { get; set; }
         public bool Cartografiada { get; set; }
         public int CoordenadaX { get; set; }
         public int CoordenadaY { get; set; }
+
+        [JsonIgnore]
+        public char[,] MapaLocal { get; private set; }
+
+        [JsonIgnore]
+        public int CadeteStartX { get; private set; }
+
+        [JsonIgnore]
+        public int CadeteStartY { get; private set; }
+
+        public int AnchoMapa { get; } = 40;
+        public int AltoMapa { get; } = 20;
+
         public Realidad()
         {
             Random rndRealidad = new Random();
@@ -1377,11 +1529,70 @@ namespace NEXUS
             this.Estabilidad = rndRealidad.Next(30, 70);
             this.Anomalia = (Anomalia)rndRealidad.Next(0, 4);
             ListaRealidades.Add(this);
-            Extraida = false;
-            Cartografiada = false;
-            CoordenadaX = -1;
-            CoordenadaY = -1;
+            Extraida = false; Cartografiada = false; CoordenadaX = -1; CoordenadaY = -1;
+
+            MapaLocal = new char[AltoMapa, AnchoMapa];
+            for (int y = 0; y < AltoMapa; y++) for (int x = 0; x < AnchoMapa; x++) MapaLocal[y, x] = '·';
+
+            char[] ruidoBorde = { '█', '▓', '▒', '░' };
+            for (int y = 0; y < AltoMapa; y++)
+            {
+                for (int x = 0; x < AnchoMapa; x++)
+                {
+                    int distX = Math.Min(x, AnchoMapa - 1 - x);
+                    int distY = Math.Min(y, AltoMapa - 1 - y);
+                    int distAlBorde = Math.Min(distX, distY);
+                    if (distAlBorde < 4 && rndRealidad.Next(100) < (90 - (distAlBorde * 20)))
+                        MapaLocal[y, x] = ruidoBorde[Math.Min(distAlBorde, 3)];
+                }
+            }
+
+            // Colocamos la base permanentemente una vez
+            int baseRx, baseRy;
+            do { baseRx = rndRealidad.Next(3, AnchoMapa - 3); baseRy = rndRealidad.Next(3, AltoMapa - 3); }
+            while (MapaLocal[baseRy, baseRx] != '·');
+            MapaLocal[baseRy, baseRx] = '☗';
+            CadeteStartX = baseRx; CadeteStartY = baseRy;
         }
+
+        // Nuevo método: Borra y repuebla todo menos la Base cada vez que entras
+        public void RellenarEntidadesLocales(int nivelJugador)
+        {
+            Random rnd = new Random();
+            for (int y = 0; y < AltoMapa; y++)
+            {
+                for (int x = 0; x < AnchoMapa; x++)
+                {
+                    char c = MapaLocal[y, x];
+                    if (c == '☖' || c == '಄' || c == '♡' || c == '▤' || c == 'Ж' || c == 'Φ' || c == '?')
+                        MapaLocal[y, x] = '·'; // Limpiamos entidades viejas
+                }
+            }
+
+            void ColocarEntidad(char simbolo, int cantidad)
+            {
+                for (int i = 0; i < cantidad; i++)
+                {
+                    int rx, ry;
+                    do { rx = rnd.Next(3, AnchoMapa - 3); ry = rnd.Next(3, AltoMapa - 3); }
+                    while (MapaLocal[ry, rx] != '·');
+                    MapaLocal[ry, rx] = simbolo;
+                }
+            }
+
+            ColocarEntidad('☖', rnd.Next(1, 4));
+            ColocarEntidad('಄', rnd.Next(2, 5));
+            ColocarEntidad('♡', rnd.Next(2, 5));
+            ColocarEntidad('▤', rnd.Next(4, 7));
+            ColocarEntidad('Ж', rnd.Next(5 + nivelJugador, 8 + (nivelJugador * 2)));
+            ColocarEntidad('Φ', rnd.Next(4, 8));
+            ColocarEntidad('?', rnd.Next(2, 6));
+        }
+    }
+    class DatosPartida
+    {
+        public Usuario Jugador { get; set; }
+        public Realidad RealidadActual { get; set; }
     }
     class Objeto
     {
