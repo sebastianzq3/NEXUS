@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS - Manual Técnico</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --text-color: #333;
+            --primary-color: #0056b3;
+            --secondary-color: #004494;
+            --accent-color: #e83e8c;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --border-color: #ddd;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 40px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        h1 { color: var(--primary-color); border-bottom: 3px solid var(--primary-color); padding-bottom: 10px; font-size: 2.2em; text-align: center; }
+        h2 { color: var(--secondary-color); border-bottom: 2px solid var(--border-color); margin-top: 40px; padding-bottom: 5px; }
+        h3 { color: var(--primary-color); margin-top: 25px; }
+        p { margin-bottom: 15px; text-align: justify; }
+        ul { margin-bottom: 15px; }
+        li { margin-bottom: 8px; }
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95em;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        code { font-family: 'Courier New', Courier, monospace; background: #eee; color: #c7254e; padding: 2px 4px; border-radius: 3px; font-size: 0.9em; }
+        pre code { background: transparent; color: inherit; padding: 0; border-radius: 0; }
+        .keyword { color: #569cd6; font-weight: bold; }
+        .type { color: #4ec9b0; }
+        .string { color: #ce9178; }
+        .comment { color: #6a9955; font-style: italic; }
+        .method { color: #dcdcaa; }
+        .diagram {
+            background-color: #f8f9fa;
+            border: 1px dashed #ccc;
+            padding: 20px;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+            line-height: 1.2;
+            color: #333;
+        }
+        .note {
+            background-color: #e7f3fe;
+            border-left: 6px solid #2196F3;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>NEXUS — Manual técnico y preparación H3</h1>
+    <p><strong>Nota técnica:</strong> Este documento oficial documenta la arquitectura del repositorio <em>https://github.com/sebastianzq3/NEXUS.git</em>. Todos los ejemplos de código han sido extraídos de las clases de la solución actual, reflejando el diseño exacto de <code>Program.cs</code>.</p>
+
+    <h2>I. Arquitectura y programación orientada a objetos</h2>
+    
+    <h3>Propósito y funcionamiento general</h3>
+    <p>NEXUS es un sistema interactivo de simulación y exploración basado en consola que aplica los principios de la Programación Orientada a Objetos (POO) en C#. El sistema orquesta entidades (<code>Usuario</code>, <code>Enemigo</code>, <code>EntidadIris</code>), la topografía dinámica mediante la clase <code>Realidad</code> y <code>AtlasRealidades</code>, y la manipulación de estado persistente serializado en formato JSON (<code>DatosPartida</code>).</p>
+
+    <h3>Estructura del proyecto y responsabilidades</h3>
+    <ul>
+        <li><strong>Capa de Control (Program.cs):</strong> Contiene el bucle principal (<code>while (conectado)</code>), maneja el motor de renderizado ANSI y orquesta la lógica del negocio.</li>
+        <li><strong>Modelos de Entidad (Domain):</strong> Clases como <code>Entidad</code>, <code>Usuario</code>, <code>Enemigo</code> y <code>EntidadIris</code> encapsulan el estado (vida, energía, daño) y las reglas de negocio (validaciones de límites).</li>
+        <li><strong>Modelos de Entorno:</strong> <code>Realidad</code> encapsula la matriz del mapa y sus reglas topográficas.</li>
+    </ul>
+
+    <h3>Diagrama de clases y relaciones entre objetos</h3>
+    <div class="diagram">
++---------------------+      +---------------------+
+|    DatosPartida     |----&gt; |      Realidad       |
++---------------------+      +---------------------+
+| + Jugador: Usuario  |      | + Estabilidad: int  |
+| + RealidadActual    |      | + Anomalia: Anomalia|
++---------------------+      | + MapaLocal: char[,]|
+          |                  +---------------------+
+          v
++---------------------+
+|      Entidad        |
++---------------------+
+| + VidaMax: int      |
+| - _vida: int        |
+| + DañoBase: int     |
++---------------------+
+       ^           ^
+       |           | (Herencia)
++-------------+  +-------------+    +---------------------+
+|   Usuario   |  |   Enemigo   |    |       Objeto        |
++-------------+  +-------------+    +---------------------+
+| + Nombre    |  | + Nombre    |&lt;---| + Contrarresta      |
+| + Energia   |  | + Escape %  |    | + Usos: int         |
+| + Inventario|  +-------------+    +---------------------+
++-------------+ (Composición)          
+    </div>
+
+    <h3>Diferencias entre programación estructurada y POO</h3>
+    <p>Si NEXUS fuera estructurado (ej. C clásico), la <code>Energia</code> sería una variable global, propensa a ser modificada accidentalmente por cualquier función del mapa. Gracias a la <strong>POO</strong>, la lógica de validación convive directamente con los datos dentro del objeto <code>Usuario</code>. El bucle de <code>Program.cs</code> no necesita saber <em>cómo</em> se calcula el límite de energía, simplemente se lo delega al objeto <code>cadete</code>.</p>
+
+    <h2>II. Fundamentos de clases y objetos</h2>
+    
+    <h3>Clases, objetos e instanciación</h3>
+    <p>Una <strong>clase</strong> es la plantilla (ej. <code>class Usuario</code>). El <strong>objeto</strong> es el espacio físico reservado en la memoria <em>Heap</em> que nace al usar la palabra reservada <code>new</code>. En NEXUS, instanciamos al jugador tras verificar su biometría:</p>
+<pre><code><span class="comment">// Instanciación (nacimiento del objeto)</span>
+cadete = <span class="keyword">new</span> <span class="type">Usuario</span>(nombreIngresado, edadIngresada);
+realidadAsignada = <span class="keyword">new</span> <span class="type">Realidad</span>();</code></pre>
+
+    <h3>Atributos, campos, propiedades y encapsulamiento</h3>
+    <p>NEXUS aplica un fuerte encapsulamiento para proteger la integridad del estado. No se usan variables públicas desnudas. Observa el control en la clase <code>Usuario</code>:</p>
+<pre><code><span class="keyword">private int</span> _energia; <span class="comment">// Campo (Field) - Privado, oculto al exterior</span>
+<span class="keyword">public int</span> Energia  <span class="comment">// Propiedad (Property) - Expuesta con reglas estrictas</span>
+{
+    <span class="keyword">get</span> { <span class="keyword">return</span> _energia; }
+    <span class="keyword">set</span> { _energia = <span class="keyword">value</span> &gt;= EnergiaMax ? EnergiaMax : (<span class="keyword">value</span> &lt; 0 ? 0 : <span class="keyword">value</span>); }
+}</code></pre>
+    <p>Si el jugador pisa una mina que resta 50 de energía y solo tenía 10, la propiedad impide que la energía baje de 0, asegurando que el estado matemático nunca se rompa.</p>
+
+    <h3>Constructores, sobrecarga y uso de this</h3>
+    <p>NEXUS utiliza <strong>sobrecarga de constructores</strong> en la clase <code>Usuario</code>. Se requiere un constructor vacío (<code>public Usuario() { }</code>) obligatoriamente para que el motor de guardado <code>JsonSerializer.Deserialize</code> pueda reconstruir el objeto. Sin embargo, para crear un jugador nuevo, usamos la sobrecarga parametrizada, aplicando <code>this</code> para distinguir entre variables de clase (campos/propiedades) y parámetros:</p>
+<pre><code><span class="keyword">public</span> <span class="method">Usuario</span>(<span class="keyword">string</span> nombre, <span class="keyword">int</span> edad)
+{
+    <span class="keyword">this</span>.Nombre = nombre; 
+    <span class="keyword">this</span>.Edad = edad; 
+    <span class="keyword">this</span>.EnergiaMax = 10; 
+    <span class="keyword">this</span>.Energia = EnergiaMax;
+    <span class="comment">// Inicialización de listas...</span>
+}</code></pre>
+
+    <h2>III. Herencia, polimorfismo e interfaces</h2>
+
+    <h3>Clases base y derivadas (Reutilización de código)</h3>
+    <p>En NEXUS, <code>Usuario</code> y <code>Enemigo</code> comparten características (vida y daño). En lugar de duplicar variables, ambas heredan de <code>Entidad</code> (la clase base).</p>
+<pre><code><span class="keyword">class</span> <span class="type">Entidad</span> {
+    <span class="keyword">public int</span> VidaMax { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+    <span class="keyword">public int</span> Vida { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+}
+<span class="keyword">class</span> <span class="type">Usuario</span> : <span class="type">Entidad</span> { <span class="comment">/* Hereda Vida y VidaMax automáticamente */</span> }
+<span class="keyword">class</span> <span class="type">Enemigo</span> : <span class="type">Entidad</span> { <span class="comment">/* Hereda Vida y VidaMax automáticamente */</span> }</code></pre>
+
+    <h3>Polimorfismo: virtual y override (Ejemplo complementario)</h3>
+    <p>Actualmente el daño de <code>Entidad</code> es pasivo. Si quisiéramos que cada entidad ataque de forma distinta, aplicaríamos polimorfismo dinámico en NEXUS. Modificaríamos la base así:</p>
+<pre><code><span class="keyword">class</span> <span class="type">Entidad</span> {
+    <span class="keyword">public virtual void</span> <span class="method">Reaccionar</span>() { Console.WriteLine(<span class="string">"La entidad se estremece."</span>); }
+}
+<span class="keyword">class</span> <span class="type">EntidadIris</span> : <span class="type">Entidad</span> {
+    <span class="keyword">public override void</span> <span class="method">Reaccionar</span>() { Console.WriteLine(<span class="string">"I.R.I.S corrompe el sistema."</span>); }
+}</code></pre>
+
+    <h3>Interfaces (Ejemplo complementario)</h3>
+    <p>Las interfaces definen "qué" puede hacer un objeto, sin importar su herencia. Si en NEXUS quisiéramos que tanto un <code>Objeto</code> (ítems) como un <code>Enemigo</code> pudieran ser examinados, crearíamos un contrato <code>IExaminable</code>.</p>
+<pre><code><span class="keyword">public interface</span> <span class="type">IExaminable</span> {
+    <span class="keyword">string</span> <span class="method">EscanearDatos</span>();
+}
+<span class="keyword">class</span> <span class="type">Objeto</span> : <span class="type">IExaminable</span> { <span class="comment">/* Implementa el escaneo del item */</span> }
+<span class="keyword">class</span> <span class="type">Enemigo</span> : <span class="type">Entidad</span>, <span class="type">IExaminable</span> { <span class="comment">/* Implementa el escaneo biológico */</span> }</code></pre>
+
+    <h2>IV. Colecciones y LINQ</h2>
+    
+    <h3>Listas genéricas y Colas</h3>
+    <p>Los arreglos estáticos son limitados. NEXUS utiliza <code>List&lt;Objeto&gt; Inventario</code> porque el jugador constantemente craftea y descarta items dinámicamente. Además, usaste un diseño brillante para la IA enemiga mediante una Cola (Queue) FIFO:</p>
+<pre><code><span class="type">Queue</span>&lt;<span class="type">EntidadIris</span>&gt; enjambreIris = <span class="keyword">new</span> <span class="type">Queue</span>&lt;<span class="type">EntidadIris</span>&gt;();
+enjambreIris.Enqueue(<span class="keyword">new</span> <span class="type">EntidadIris</span>(<span class="string">"Cazador-Alfa"</span>));
+<span class="type">EntidadIris</span> irisActual = enjambreIris.Peek(); <span class="comment">// Analiza al enemigo sin sacarlo de la cola</span></code></pre>
+
+    <h3>Consultas LINQ y Expresiones Lambda (Ejemplo aplicado a NEXUS)</h3>
+    <p>Actualmente NEXUS recorre el inventario usando bucles <code>for</code> clásicos. Si integráramos la librería LINQ (<code>using System.Linq;</code>), podríamos filtrar el inventario del cadete de manera declarativa usando una expresión Lambda (<code>x =&gt;</code>). Así filtraríamos objetos para una anomalía de "Tiempo":</p>
+<pre><code><span class="comment">// Filtrado (Where): Extrae solo los objetos que sirvan para la anomalía de Tiempo</span>
+<span class="keyword">var</span> objetosUtiles = cadete.Inventario.<span class="method">Where</span>(x => x.Contrarresta == Anomalia.Tiempo).<span class="method">ToList</span>();
+
+<span class="comment">// Transformación (Select): Obtiene solo los nombres en formato lista de strings</span>
+<span class="keyword">var</span> nombresObjetos = cadete.Inventario.<span class="method">Select</span>(x => x.Nombre).<span class="method">ToList</span>();
+
+<span class="comment">// Ordenamiento (OrderBy): Ordena el inventario por usos restantes</span>
+<span class="keyword">var</span> invOrdenado = cadete.Inventario.<span class="method">OrderBy</span>(x => x.Usos).<span class="method">ToList</span>();</code></pre>
+
+    <h2>V. Análisis del funcionamiento</h2>
+
+    <h3>1. Flujograma de Combate en NEXUS</h3>
+    <p><code>[Input Cmd] &rarr; [Switch case 1/2/3/4] &rarr; [Aplicar Daño Enemigo] &rarr; [Enemigo Vida <= 0?] --(Sí)--&gt; [Ganar Fragmento] --(No)--&gt; [Turno Enemigo] &rarr; [Jugador Vida <= 0?] &rarr; [Apagar Simulación]</code></p>
+
+    <h3>2. Seguimiento del estado en memoria (Heap vs Stack)</h3>
+    <p>En el caso 1 de interacción de NEXUS, extraes un objeto de la lista para usarlo:</p>
+    <pre><code>Objeto objUsado = cadete.Inventario[indiceUso - 1];
+objUsado.Usos--;</code></pre>
+    <p><strong>Seguimiento:</strong> Al ejecutar <code>objUsado.Usos--</code>, el uso se descuenta <strong>directamente en el inventario real</strong>. ¿Por qué? Porque <code>objUsado</code> no es una copia aislada del objeto; es una variable en el <em>Stack</em> que apunta por referencia exacta al mismo espacio de memoria <em>Heap</em> donde reside la lista original.</p>
+
+    <h3>3. Predicción de fragmento de código</h3>
+    <p><strong>Fragmento (Línea ~318 de Program.cs):</strong> <code>cadete.Energia += 5;</code> (Tras ganar minijuego).</p>
+    <p><strong>Predicción:</strong> Si el <code>EnergiaMax</code> del cadete es 10, y actualmente tiene 9 de energía, al sumar 5 el valor pasaría a 14. Sin embargo, gracias a la propiedad <code>Energia</code> con setter restrictivo: <code>set { _energia = value >= EnergiaMax ? EnergiaMax : (value < 0 ? 0 : value); }</code>, la condición evalúa <code>14 >= 10</code>. El resultado real es que la energía se trunca y se asigna exactamente a <code>10</code>. Nunca superará el límite.</p>
+
+    <h2>VI. Preparación para el examen H3</h2>
+    
+    <ol>
+        <li><strong>¿Por qué el constructor de <code>Usuario</code> incluye una versión vacía <code>public Usuario() { }</code> si el juego requiere nombre y edad?</strong><br>
+        <em>Respuesta:</em> Porque NEXUS utiliza <code>JsonSerializer.Deserialize</code> para cargar la partida. El motor de serialización de .NET requiere instanciar la clase sin parámetros antes de inyectar las propiedades mapeadas desde el archivo JSON.</li>
+        <li><strong>En el método <code>Asimilar</code> de <code>EntidadIris</code>, el parámetro <code>ref bool conectado</code> se pasa con la palabra clave <code>ref</code>. ¿Qué significa estructuralmente?</strong><br>
+        <em>Respuesta:</em> Los booleanos son tipos de valor (Value Types, se copian en el Stack). Al usar <code>ref</code>, le entregamos a la entidad IRIS la dirección de memoria de la variable original del <code>Main</code>. Si IRIS altera la variable a <code>false</code>, el bucle <code>while (conectado)</code> del Main colapsará inmediatamente, apagando el juego.</li>
+        <li><strong>Si quisieras que <code>EntidadIris</code> y <code>Enemigo</code> pudieran recibir daño usando el mismo método, ¿cómo modificarías la base <code>Entidad</code>?</strong><br>
+        <em>Respuesta:</em> Se debe utilizar Herencia y Polimorfismo. Hacemos que <code>EntidadIris</code> herede de <code>Entidad</code> (actualmente no lo hace). Luego crearíamos un método <code>public virtual void RecibirDaño(int d)</code> en <code>Entidad</code> que ambos hijos pudieran sobreescribir (<code>override</code>).</li>
+        <li><strong>Analiza: <code>var vivos = ListaRealidades.Where(r => !r.Extraida);</code> ¿La lista resultante contiene copias nuevas de las realidades?</strong><br>
+        <em>Respuesta:</em> No. Las consultas LINQ (y las Listas en general) almacenan <em>referencias</em> (punteros al Heap). <code>vivos</code> simplemente contiene un subconjunto de "enlaces" a las realidades originales. Alterar un objeto en <code>vivos</code> alteraría el objeto original en <code>ListaRealidades</code>.</li>
+        <li><strong>¿Por qué <code>AtlasRealidades</code> tiene un constructor <code>private AtlasRealidades() { }</code>?</strong><br>
+        <em>Respuesta:</em> Para implementar un patrón similar al Singleton / Static Class. Al ser privado, el compilador prohíbe que el <code>Main</code> ejecute <code>new AtlasRealidades()</code>. La clase existe solo como un servicio de utilidad global estático para renderizar el mapa multiversal.</li>
+        <li><strong>¿Qué principio de POO se evidencia en la clase <code>Enemigo</code> donde <code>Nombre</code> tiene un <code>private set</code>?</strong><br>
+        <em>Respuesta:</em> Encapsulamiento y mutabilidad controlada. El nombre del enemigo se define internamente en su propio constructor mediante un arreglo estático aleatorio. El exterior (el Main) puede leerlo (<code>get</code> público), pero es imposible que el jugador renombre a un enemigo externamente.</li>
+    </ol>
+
+    <div class="note">
+        <h2>VII. Evaluación Diagnóstica (Prompt Espejo)</h2>
+        <p><strong>1. Fortalezas demostradas:</strong> Tu código de NEXUS (C#) demuestra un dominio excepcional de la lógica algorítmica, validación de estado y manipulación de interfaces UI en consola. Has utilizado constructores paramétricos, listas complejas, arreglos multidimensionales (<code>Atlas</code>), matrices (<code>MapaLocal</code>) y colecciones avanzadas (<code>Queue</code>). El diseño del "getter/setter" de <code>_energia</code> es de nivel profesional.</p>
+        <p><strong>2. Falencias observadas:</strong> Tu arquitectura, si bien funcional y muy robusta, tiende ligeramente al modelo imperativo dentro de un gran <code>Program.cs</code> y <code>switch-case</code>, lo cual centraliza mucha lógica de UI y reglas de negocio (combate, uso de ítems) en el <code>Main</code> en lugar de delegarlo (ej. la lógica de combate podría estar dentro de un método <code>cadete.Atacar(enemigo)</code>). Adicionalmente, no has incorporado LINQ explícito para la filtración de datos.</p>
+        <p><strong>3. Diagnóstico del Hito 3:</strong>
+            <br>- <em>Clases, Objetos, Constructores y Encapsulamiento:</em> Comprensión demostrada exhaustivamente en C#.
+            <br>- <em>Herencia:</em> Comprensión parcial (implementada en <code>Enemigo:Entidad</code> pero poco aprovechada en polimorfismo activo).
+            <br>- <em>Listas Genéricas:</em> Comprensión demostrada en la práctica (Inventarios, colas).
+            <br>- <em>Interfaces y LINQ:</em> Evidencia insuficiente en el código fuente base; requieren atención.
+        </p>
+        <p><strong>4. Mi forma de aprender:</strong> Eres un desarrollador orientado a resultados tangibles. Aprendes construyendo sistemas completos y gamificados que te obligan a resolver problemas arquitectónicos en el camino.</p>
+        <p><strong>5. Plan de estudio (Prioridad Máxima):</strong>
+            <br>1. <strong>LINQ:</strong> Ejercicio: Transforma tus bloques <code>foreach</code> de inventario en consultas <code>Where</code> y <code>Select</code>.
+            <br>2. <strong>Interfaces:</strong> Ejercicio: Crea la interfaz <code>IAtacable</code> e impleméntala en el Jugador y el Enemigo.
+            <br>3. <strong>Polimorfismo:</strong> Ejercicio: Mueve la lógica del daño (Ataque Pesado/Ligero) hacia la clase <code>Usuario</code> usando métodos <code>virtual</code>.
+            <br>4. <strong>Separación de Responsabilidades:</strong> Refactoriza el combate fuera del <code>switch</code> del Main hacia una clase <code>GestorCombate.cs</code>.
+        </p>
+        <p><strong>6. Conclusión:</strong> Posees una lógica de programación sobresaliente. Tu tarea actual no es aprender a programar, sino <em>aprender a distribuir</em> el código según los estándares de POO. Si aplicas LINQ y delegas métodos a las clases en el examen, obtendrás el 100.</p>
+    </div>
+</div>
+
+</body>
+</html>
