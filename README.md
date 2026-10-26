@@ -22,15 +22,23 @@ El proyecto sigue una estructura limpia, omitiendo binarios temporales mediante 
 
 ```text
 📦 NEXUS
- ┣ 📂 docs/               # Manual técnico, diagramas y guía de estudio H3 (PDF/HTML)
- ┣ 📂 src/                # Código fuente del proyecto
- ┃ ┣ 📂 Models/           # Entidades del sistema (Clases base, interfaces, derivadas)
- ┃ ┣ 📂 Managers/         # Lógica de negocio y repositorios de listas
- ┃ ┣ 📜 Program.cs        # Punto de entrada de la aplicación
- ┃ ┗ 📜 NEXUS.csproj      # Archivo de configuración del proyecto C#
- ┣ 📜 .gitignore          # Reglas de exclusión (bin, obj, .vs)
- ┣ 📜 NEXUS.sln           # Solución principal de Visual Studio
- ┗ 📜 README.md           # Documentación principal del repositorio
+ ┣ 📂 docs/                                # Documentación de diseño, arquitectura y manuales
+ ┃ ┣ 📂 evidencias/                        # Bocetos de interfaces y wireframes
+ ┃ ┃ ┗ 📜bocetos-de-interfaces-graficas.md
+ ┃ ┣ 📜 analisis-tecnico.md                # Alternativas evaluadas, decisiones y fuentes (IA)
+ ┃ ┣ 📜 arquitectura-actual.md             # Estructura, funcionalidades y limitaciones de H3
+ ┃ ┣ 📜 arquitectura-propuesta.md          # Separación en capas para la versión con UI
+ ┃ ┣ 📜 diseno-del-juego.md                # Visión, ciclo principal y mecánicas del juego
+ ┃ ┣ 📜 modelo-de-datos-propuesto.md       # Entidades y relaciones para SQL Server
+ ┃ ┗ 📜 NEXUS_Manual_Tecnico               # Manual técnico, diagramas y guía de estudio H3 original
+ ┣ 📂 src/                                 # Código fuente del proyecto
+ ┃ ┣ 📂 Models/                            # Entidades del sistema (Clases base, interfaces, derivadas)
+ ┃ ┣ 📂 Managers/                          # Lógica de negocio y repositorios de listas
+ ┃ ┣ 📜 Program.cs                         # Punto de entrada de la aplicación
+ ┃ ┗ 📜 NEXUS.csproj                       # Archivo de configuración del proyecto C#
+ ┣ 📜 .gitignore                           # Reglas de exclusión (bin, obj, .vs)
+ ┣ 📜 NEXUS.sln                            # Solución principal de Visual Studio
+ ┗ 📜 README.md                            # Documentación principal del repositorio
 ```
 
 ## 🚀 Guía de Ejecución
@@ -47,13 +55,23 @@ El proyecto sigue una estructura limpia, omitiendo binarios temporales mediante 
 4. **Ejecución:**
    Presiona `F5` o haz clic en "Iniciar" para desplegar la consola/interfaz de NEXUS.
 
-## 🧠 Documentación y Preparación (Hito 3)
-La carpeta `docs/` contiene el **Manual Técnico Oficial de NEXUS**. Este documento no solo explica el funcionamiento de este código, sino que actúa como una guía de estudio intensiva para la evaluación del Hito 3, abordando:
+## 🧠 Documentación y Evolución del Proyecto (Hito 3 y Final)
+La carpeta `docs/` contiene el **Manual Técnico Oficial de NEXUS** junto con la **nueva documentación de diseño y arquitectura** exigida para la evolución gráfica del proyecto.
+
+**Fase de Consola y Guía de Estudio (Hito 3)**
+El manual original no solo explica el funcionamiento de este código, sino que actúa como una guía de estudio intensiva abordando:
 - Diferencias entre POO y Programación Estructurada.
 - Manejo de memoria (Objetos vs Clases, Instanciación).
 - Herencia múltiple de interfaces vs Herencia simple de clases.
 - Ejecución diferida en colecciones con LINQ.
 - Banco de preguntas universitarias resueltas.
+
+**Fase de Expansión Gráfica (CONSTRAINTS - Evaluación Final)**
+Los nuevos documentos Markdown establecen la ruta técnica para migrar NEXUS hacia **Windows Forms** y **SQL Server**:
+- `diseno-del-juego.md` y `evidencias/`: Visión de la nueva experiencia, mecánicas, ciclo principal de juego y bocetos (wireframes) de las futuras pantallas.
+- `arquitectura-actual.md` y `arquitectura-propuesta.md`: Diagnóstico del monolitismo en consola y propuesta estructural separada en capas (UI, Lógica, Datos).
+- `modelo-de-datos-propuesto.md`: Diseño relacional de entidades para persistir el progreso multiverso de los cadetes de forma segura.
+- `analisis-tecnico.md`: Evaluación de alternativas, ventajas/desventajas, decisiones justificadas y verificación de información obtenida mediante IA.
 
 ---
 *Desarrollado para la asignatura de Programación II. Misión: De Código a Conocimiento.*
