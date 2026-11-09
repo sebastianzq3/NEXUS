@@ -22,28 +22,33 @@ El sistema NEXUS ha evolucionado desde un simulador secuencial en consola hacia 
 ## 📂 Estructura del Repositorio
 El proyecto mantiene una organización modular dentro de la solución principal, separando la documentación técnica, la versión original de consola (H3) y el proyecto gráfico en Windows Forms (`Interfaz`):
 
+## 📂 Estructura del Repositorio
+El proyecto sigue una estructura limpia, omitiendo binarios temporales (`bin`, `obj`, `.vs`, `*.user`) mediante un archivo `.gitignore` configurado específicamente para C# y Visual Studio.
+
 ```text
 📦 NEXUS
  ┣ 📂 docs/                                # Documentación de diseño, arquitectura y manuales
  ┃ ┣ 📂 evidencias/                        # Bocetos de interfaces y wireframes
  ┃ ┃ ┗ 📜 bocetos-de-interfaces-graficas.md
- ┃ ┣ 📜 analisis-tecnico.md                # Alternativas evaluadas, GDI+ DoubleBuffer y fuentes
+ ┃ ┣ 📜 analisis-tecnico.md                # Alternativas evaluadas, decisiones y fuentes (IA)
  ┃ ┣ 📜 arquitectura-actual.md             # Arquitectura Event-Driven en Windows Forms y legado H3
- ┃ ┣ 📜 arquitectura-propuesta.md          # Hoja de ruta N-Capas (GUI implementada -> BLL/DAL SQL)
- ┃ ┣ 📜 diseno-del-juego.md                # Mecánicas de Modo Campamento, Exploración y UX
- ┃ ┣ 📜 modelo-de-datos-propuesto.md       # Entidades y relaciones propuestas para SQL Server
+ ┃ ┣ 📜 arquitectura-propuesta.md          # Separación en capas para la versión con UI
+ ┃ ┣ 📜 diseno-del-juego.md                # Visión, ciclo principal y mecánicas del juego
+ ┃ ┣ 📜 modelo-de-datos-propuesto.md       # Entidades y relaciones para SQL Server
  ┃ ┗ 📜 NEXUS_Manual_Tecnico               # Manual técnico, diagramas y guía de estudio H3 original
- ┣ 📂 Interfaz/                            # Proyecto principal Windows Forms (GUI)
- ┃ ┣ 📜 Form1.cs                           # Lógica de eventos, renderizado GDI+, modales y dominio
- ┃ ┣ 📜 Form1.Designer.cs                  # Definición de controles UI, HUD, BufferedCanvas y Panel Táctico
- ┃ ┣ 📜 Form1.resx                         # Recursos del formulario principal
- ┃ ┣ 📜 Program.cs                         # Punto de entrada [STAThread] de la aplicación gráfica
- ┃ ┗ 📜 Interfaz.csproj                    # Configuración del proyecto Windows Forms
- ┣ 📂 src/                                 # Código fuente original de consola (Hito 3)
- ┃ ┣ 📜 Program.cs                         # Simulador original en consola ANSI
- ┃ ┗ 📜 NEXUS.csproj                       # Configuración del proyecto de consola
+ ┣ 📂 src/                                 # Código fuente y solución principal
+ ┃ ┣ 📂 Interfaz/                          # Proyecto gráfico en Windows Forms (GUI)
+ ┃ ┃ ┣ 📜 Form1.cs                         # Lógica de eventos, renderizado GDI+, modales y dominio
+ ┃ ┃ ┣ 📜 Form1.Designer.cs                # Diseño de controles UI, HUD, BufferedCanvas y Panel Táctico
+ ┃ ┃ ┣ 📜 Form1.resx                       # Recursos del formulario principal
+ ┃ ┃ ┣ 📜 Interfaz.csproj                  # Archivo de configuración del proyecto Windows Forms
+ ┃ ┃ ┗ 📜 Program.cs                       # Punto de entrada [STAThread] de la aplicación gráfica
+ ┃ ┣ 📂 NEXUS/                             # Proyecto original de consola (Hito 3)
+ ┃ ┃ ┣ 📂 Properties/                      # Propiedades de ensamblado del proyecto
+ ┃ ┃ ┣ 📜 NEXUS.csproj                     # Archivo de configuración del proyecto de consola
+ ┃ ┃ ┗ 📜 Program.cs                       # Código fuente del simulador en consola ANSI
+ ┃ ┗ 📜 NEXUS.sln                          # Solución principal de Visual Studio
  ┣ 📜 .gitignore                           # Reglas de exclusión (bin, obj, .vs)
- ┣ 📜 NEXUS.sln                            # Solución principal de Visual Studio
  ┗ 📜 README.md                            # Documentación principal del repositorio
 ```
 
