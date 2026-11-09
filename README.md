@@ -1,41 +1,47 @@
-# 🌐 NEXUS - Sistema de Gestión Centralizada
+# 🌐 NEXUS - Sistema de Simulación y Gestión Multiversal
 
 ![C#](https://img.shields.io/badge/c%23-%23239120.svg?style=for-the-badge&logo=c-sharp&logoColor=white)
 ![.Net](https://img.shields.io/badge/.NET-5C2D91?style=for-the-badge&logo=.net&logoColor=white)
+![Windows Forms](https://img.shields.io/badge/Windows%20Forms-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 ![Visual Studio](https://img.shields.io/badge/Visual%20Studio-5C2D91.svg?style=for-the-badge&logo=visual-studio&logoColor=white)
 ![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white)
 
-**NEXUS** es un proyecto de software desarrollado en C# (.NET) como evidencia de dominio absoluto de los paradigmas de la Programación Orientada a Objetos (POO). Este repositorio sirve como entrega oficial y base de conocimiento para el **Hito 3 de Programación II**.
+**NEXUS** es un proyecto de software y videojuego RPG táctico de supervivencia desarrollado en C# (.NET) como evidencia de aplicación avanzada de los paradigmas de la Programación Orientada a Objetos (POO) y programación orientada a eventos en interfaces gráficas (**Windows Forms**). Este repositorio sirve como entrega oficial y base de conocimiento para **Programación II**.
 
 ## 🎯 Propósito del Proyecto
-El sistema NEXUS ha sido diseñado para abandonar la secuencialidad de la programación estructurada y adoptar una arquitectura basada en objetos, donde la información y los comportamientos están rigurosamente encapsulados. El sistema permite la creación, gestión, filtrado y polimorfismo de entidades de negocio utilizando colecciones dinámicas y consultas en memoria.
+El sistema NEXUS ha evolucionado desde un simulador secuencial en consola hacia una aplicación gráfica interactiva de escritorio basada en **Windows Forms y renderizado GDI+**. Combina encapsulamiento riguroso, herencia, colecciones dinámicas, persistencia multi-slot en JSON y una máquina de estados táctica que alterna entre la gestión en campamento y la exploración en cuadrícula $40 \times 20$.
 
 ## 🏗️ Arquitectura y Tecnologías
-- **Lenguaje:** C# (Microsoft .NET)
-- **Paradigma:** Programación Orientada a Objetos (POO)
-- **Gestión de Datos:** Colecciones Genéricas (`List<T>`) y LINQ (Language Integrated Query)
+- **Lenguaje y Runtime:** C# (Microsoft .NET)
+- **Interfaz Gráfica (GUI):** Windows Forms con renderizado 2D GDI+ (`BufferedCanvas` con `DoubleBuffered = true`)
+- **Paradigma:** Programación Orientada a Objetos (POO) y Arquitectura Orientada a Eventos (*Event-Driven*)
+- **Gestión de Datos:** Colecciones Genéricas (`List<T>`, `Queue<T>`), serialización `System.Text.Json` y diseño relacional para SQL Server
 - **Control de Versiones:** Git (GitHub Desktop)
 - **Entorno IDE:** Visual Studio Community
 
 ## 📂 Estructura del Repositorio
-El proyecto sigue una estructura limpia, omitiendo binarios temporales mediante un archivo `.gitignore` configurado específicamente para C# y Visual Studio.
+El proyecto mantiene una organización modular dentro de la solución principal, separando la documentación técnica, la versión original de consola (H3) y el proyecto gráfico en Windows Forms (`Interfaz`):
 
 ```text
 📦 NEXUS
  ┣ 📂 docs/                                # Documentación de diseño, arquitectura y manuales
  ┃ ┣ 📂 evidencias/                        # Bocetos de interfaces y wireframes
- ┃ ┃ ┗ 📜bocetos-de-interfaces-graficas.md
- ┃ ┣ 📜 analisis-tecnico.md                # Alternativas evaluadas, decisiones y fuentes (IA)
- ┃ ┣ 📜 arquitectura-actual.md             # Estructura, funcionalidades y limitaciones de H3
- ┃ ┣ 📜 arquitectura-propuesta.md          # Separación en capas para la versión con UI
- ┃ ┣ 📜 diseno-del-juego.md                # Visión, ciclo principal y mecánicas del juego
- ┃ ┣ 📜 modelo-de-datos-propuesto.md       # Entidades y relaciones para SQL Server
+ ┃ ┃ ┗ 📜 bocetos-de-interfaces-graficas.md
+ ┃ ┣ 📜 analisis-tecnico.md                # Alternativas evaluadas, GDI+ DoubleBuffer y fuentes
+ ┃ ┣ 📜 arquitectura-actual.md             # Arquitectura Event-Driven en Windows Forms y legado H3
+ ┃ ┣ 📜 arquitectura-propuesta.md          # Hoja de ruta N-Capas (GUI implementada -> BLL/DAL SQL)
+ ┃ ┣ 📜 diseno-del-juego.md                # Mecánicas de Modo Campamento, Exploración y UX
+ ┃ ┣ 📜 modelo-de-datos-propuesto.md       # Entidades y relaciones propuestas para SQL Server
  ┃ ┗ 📜 NEXUS_Manual_Tecnico               # Manual técnico, diagramas y guía de estudio H3 original
- ┣ 📂 src/                                 # Código fuente del proyecto
- ┃ ┣ 📂 Models/                            # Entidades del sistema (Clases base, interfaces, derivadas)
- ┃ ┣ 📂 Managers/                          # Lógica de negocio y repositorios de listas
- ┃ ┣ 📜 Program.cs                         # Punto de entrada de la aplicación
- ┃ ┗ 📜 NEXUS.csproj                       # Archivo de configuración del proyecto C#
+ ┣ 📂 Interfaz/                            # Proyecto principal Windows Forms (GUI)
+ ┃ ┣ 📜 Form1.cs                           # Lógica de eventos, renderizado GDI+, modales y dominio
+ ┃ ┣ 📜 Form1.Designer.cs                  # Definición de controles UI, HUD, BufferedCanvas y Panel Táctico
+ ┃ ┣ 📜 Form1.resx                         # Recursos del formulario principal
+ ┃ ┣ 📜 Program.cs                         # Punto de entrada [STAThread] de la aplicación gráfica
+ ┃ ┗ 📜 Interfaz.csproj                    # Configuración del proyecto Windows Forms
+ ┣ 📂 src/                                 # Código fuente original de consola (Hito 3)
+ ┃ ┣ 📜 Program.cs                         # Simulador original en consola ANSI
+ ┃ ┗ 📜 NEXUS.csproj                       # Configuración del proyecto de consola
  ┣ 📜 .gitignore                           # Reglas de exclusión (bin, obj, .vs)
  ┣ 📜 NEXUS.sln                            # Solución principal de Visual Studio
  ┗ 📜 README.md                            # Documentación principal del repositorio
@@ -50,28 +56,18 @@ El proyecto sigue una estructura limpia, omitiendo binarios temporales mediante 
    ```
 2. **Abrir la Solución:**
    Navega a la carpeta clonada y abre el archivo `NEXUS.sln` utilizando **Visual Studio Community**.
-3. **Compilación:**
-   Selecciona `Compilar > Compilar solución` (o presiona `Ctrl+Shift+B`) para restaurar paquetes y verificar referencias.
-4. **Ejecución:**
-   Presiona `F5` o haz clic en "Iniciar" para desplegar la consola/interfaz de NEXUS.
+3. **Configurar Proyecto de Inicio:**
+   En el Explorador de Soluciones, haz clic derecho sobre el proyecto **`Interfaz`** y selecciona **"Establecer como proyecto de inicio"** (*Set as Startup Project*).
+4. **Compilación y Ejecución:**
+   Presiona `Ctrl+Shift+B` para compilar la solución y `F5` para iniciar la interfaz gráfica de NEXUS.
 
-## 🧠 Documentación y Evolución del Proyecto (Hito 3 y Final)
-La carpeta `docs/` contiene el **Manual Técnico Oficial de NEXUS** junto con la **nueva documentación de diseño y arquitectura** exigida para la evolución gráfica del proyecto.
+## 🧠 Documentación y Evolución del Proyecto
+La carpeta `docs/` documenta tanto los fundamentos teóricos del Hito 3 como la transición arquitectónica hacia Windows Forms:
 
-**Fase de Consola y Guía de Estudio (Hito 3)**
-El manual original no solo explica el funcionamiento de este código, sino que actúa como una guía de estudio intensiva abordando:
-- Diferencias entre POO y Programación Estructurada.
-- Manejo de memoria (Objetos vs Clases, Instanciación).
-- Herencia múltiple de interfaces vs Herencia simple de clases.
-- Ejecución diferida en colecciones con LINQ.
-- Banco de preguntas universitarias resueltas.
-
-**Fase de Expansión Gráfica (CONSTRAINTS - Evaluación Final)**
-Los nuevos documentos Markdown establecen la ruta técnica para migrar NEXUS hacia **Windows Forms** y **SQL Server**:
-- `diseno-del-juego.md` y `evidencias/`: Visión de la nueva experiencia, mecánicas, ciclo principal de juego y bocetos (wireframes) de las futuras pantallas.
-- `arquitectura-actual.md` y `arquitectura-propuesta.md`: Diagnóstico del monolitismo en consola y propuesta estructural separada en capas (UI, Lógica, Datos).
-- `modelo-de-datos-propuesto.md`: Diseño relacional de entidades para persistir el progreso multiverso de los cadetes de forma segura.
-- `analisis-tecnico.md`: Evaluación de alternativas, ventajas/desventajas, decisiones justificadas y verificación de información obtenida mediante IA.
+- `diseno-del-juego.md` y `evidencias/`: Ciclo principal de juego dividido en **Modo Campamento (Mapa Congelado)** y **Modo Exploración**, reglas contextuales del Panel Táctico y modales interactivos.
+- `arquitectura-actual.md` y `arquitectura-propuesta.md`: Análisis de la migración desde el bucle síncrono de consola hacia el modelo orientado a eventos de Windows Forms (`KeyDown`, `PaintEventArgs`, `Timer`) y su proyección en capas hacia SQL Server.
+- `modelo-de-datos-propuesto.md`: Diseño relacional de entidades (`T_Jugadores`, `T_Partidas_Activas`, `T_Inventarios`) para persistir el progreso en SQL Server.
+- `analisis-tecnico.md`: Evaluación comparativa de tecnologías, mitigación de *flickering* en GDI+ mediante doble búfer y verificación técnica.
 
 ---
 *Desarrollado para la asignatura de Programación II. Misión: De Código a Conocimiento.*

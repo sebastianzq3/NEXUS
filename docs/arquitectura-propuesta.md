@@ -1,55 +1,58 @@
-# Arquitectura Propuesta: Modelo N-Capas
+# Arquitectura Propuesta: Evolución al Modelo N-Capas
 
-## 1. Visión General y Justificación
-El código original de NEXUS (H3) sufría de un anti-patrón conocido como *God Class* o Monolito, donde la clase `Program.cs` contenía la interfaz de consola, las reglas del juego, y la persistencia de datos.
-Para la versión en **Windows Forms**, es obligatorio separar las responsabilidades para garantizar la mantenibilidad y escalabilidad del código. Se propone una arquitectura en **3 Capas (3-Tier Architecture)**.
+## 1. Estado de Avance de la Migración
+La evolución arquitectónica de **NEXUS** desde su versión monolítica de consola (H3) se ha estructurado en dos fases estratégicas:
 
-## 2. Capas del Sistema
+* **Fase 1 (COMPLETADA - Proyecto `Interfaz`):** Migración total de la interfaz de consola hacia **Windows Forms**, reemplazando el bucle síncrono `while(conectado)` por una arquitectura **Orientada a Eventos (*Event-Driven*)**, renderizado matricial con doble búfer (`BufferedCanvas` en GDI+) y control de estados entre **Modo Campamento** y **Modo Exploración**.
+* **Fase 2 (EN PROYECCIÓN - Desacoplamiento N-Tier y SQL Server):** Extracción de las clases de dominio actualmente alojadas en `Form1.cs` hacia bibliotecas de clases independientes (`NEXUS.BLL` y `NEXUS.DAL`) y sustitución del guardado en archivos `.json` por persistencia transaccional en **Microsoft SQL Server**.
 
-### 2.1. Capa de Presentación (NEXUS.GUI)
-Esta capa será un proyecto del tipo *Windows Forms App*.
-*   **Responsabilidad:** Capturar la entrada del usuario (clicks, teclado) y renderizar la información en pantalla.
-*   **Componentes:**
-    *   `FrmMain`: Menú de selección de perfiles.
-    *   `FrmExploracion`: Pantalla principal del mapa táctico.
-    *   `FrmCombate`: Ventana modal para enfrentamientos.
-    *   `FrmInventario`: Gestor de recursos y crafteo.
-*   *Regla de oro:* Ningún formulario debe calcular daños, experiencia o gestionar bases de datos. Solo delegan la acción a la capa inferior.
+---
 
-### 2.2. Capa de Lógica de Negocio (NEXUS.BLL)
-Esta capa será un proyecto del tipo *Class Library* (Biblioteca de clases).
-*   **Responsabilidad:** Contener todas las reglas del universo de NEXUS.
-*   **Componentes:**
-    *   **Entidades Core:** Aquí migran las clases puras del H3: `Usuario`, `Enemigo`, `Realidad`, `Objeto`, `EntidadIris`.
-    *   **Controladores/Managers:** Clases encargadas de gestionar mecánicas. Por ejemplo, un `ExplorationManager` que verifique si una coordenada es válida para moverse, o un `CombatEngine` que procese las fórmulas de daño y bloqueo.
+## 2. Capas del Sistema (Arquitectura Objetivo 3-Tier)
 
-### 2.3. Capa de Acceso a Datos (NEXUS.DAL)
-Esta capa será un proyecto del tipo *Class Library*.
-*   **Responsabilidad:** Actuar como puente entre la Lógica de Negocio y SQL Server.
-*   **Componentes:**
-    *   **DbContext:** Si se utiliza Entity Framework Core, aquí reside el contexto de la base de datos (`NexusContext`), configurando los `DbSet` para mapear las tablas.
-    *   **Repositorios:** Clases estandarizadas (ej. `JugadorRepository`) con métodos CRUD (`ObtenerTodos()`, `GuardarPartida()`, `EliminarPerfil()`).
+### 2.1. Capa de Presentación (`Interfaz` / `NEXUS.GUI`) — *Implementada*
+Proyecto de tipo *Windows Forms App*.
+* **Responsabilidad:** Capturar la entrada del usuario (teclado `WASD`/Flechas, clics en grilla y botones tácticos) y renderizar el estado del simulador en pantalla.
+* **Componentes actuales:**
+  * `Form1` (Gestor de Perfiles Biométricos, HUD Superior, Lienzo GDI+ $40 \times 20$, Panel Táctico Contextual y Registro de Telemetría).
+  * Diálogos Modales integrados: Combate Táctico, Inventario y Síntesis, Soporte Vital, Tienda de Proficiencia y Atlas Multiversal ($18 \times 12$).
+
+### 2.2. Capa de Lógica de Negocio (`NEXUS.BLL`) — *Lógica validada lista para extracción*
+Proyecto de tipo *Class Library* (Biblioteca de clases).
+* **Responsabilidad:** Contener todas las reglas del universo de NEXUS sin referencias a `System.Windows.Forms`.
+* **Componentes:**
+  * **Entidades Core:** `Entidad`, `Usuario`, `Enemigo`, `Realidad`, `Objeto`, `EntidadIris`, `AtlasRealidades` y `DatosPartida`.
+  * **Servicios de Dominio:** Validación de desplazamientos, cálculo de curvas de coste en la tienda (`[1, 1, 2, 3, 5]`), resolución de combates y evaluación de vulnerabilidad de I.R.I.S.
+
+### 2.3. Capa de Acceso a Datos (`NEXUS.DAL`) — *Fase de Base de Datos*
+Proyecto de tipo *Class Library*.
+* **Responsabilidad:** Actuar como puente transaccional entre la Lógica de Negocio y **Microsoft SQL Server**, reemplazando la carpeta local `Saves/*.json`.
+* **Componentes:**
+  * **Conectividad / ORM:** Implementación mediante `Microsoft.Data.SqlClient` (ADO.NET) o `Entity Framework Core` (`NexusContext`).
+  * **Repositorios:** Clases estandarizadas (`JugadorRepository`, `PartidaRepository`, `InventarioRepository`) con operaciones CRUD sobre las tablas `T_Jugadores`, `T_Partidas_Activas` y `T_Inventarios`.
+
+---
 
 ## 3. Diagrama de Flujo y Dependencias
 
 ```text
-[ INTERFAZ GRÁFICA ] (NEXUS.GUI)
+[ INTERFAZ GRÁFICA WINDOWS FORMS ] (Proyecto: Interfaz)
        │
-       │ (Llama a métodos y eventos)
+       │ (Dispara eventos KeyDown, MouseClick, Timer.Tick)
        ▼
-[ LÓGICA DE NEGOCIO ] (NEXUS.BLL)
+[ LÓGICA DE NEGOCIO Y ENTIDADES ] (Clases de Dominio / NEXUS.BLL)
        │
-       │ (Solicita guardar/cargar datos de entidades)
+       │ (Serialización JSON actual / Futura llamada a Repositorios)
        ▼
-[ ACCESO A DATOS ] (NEXUS.DAL)
+[ CAPA DE PERSISTENCIA DE DATOS ] (Saves/*.json -> NEXUS.DAL)
        │
-       │ (Consultas SQL vía EF Core / ADO.NET)
        ▼
-[ BASE DE DATOS SQL SERVER ]
+[ MOTOR RELACIONAL SQL SERVER ]
 ```
 
-## 4. Evolución del Bucle de Juego (Game Loop)
-El mayor cambio arquitectónico será abandonar el bucle síncrono `while(conectado)` del H3. 
-Windows Forms es **orientado a eventos (Event-Driven)**. 
-* El juego estará "pausado" esperando que el usuario interactúe (ej. presionar una tecla dispara el evento `Form_KeyDown`).
-* Las amenazas de fondo, como la IA `EntidadIris` escaneando la estabilidad de la realidad, se ejecutarán usando componentes `System.Windows.Forms.Timer` con intervalos (ticks) específicos, evitando así que la interfaz se congele.
+---
+
+## 4. Consolidación del Bucle de Juego Orientado a Eventos
+El cambio arquitectónico más importante ya operativo en el proyecto `Interfaz` es la sustitución del bucle infinito de consola por el despacho de mensajes nativo de Windows Forms:
+1. **Estado en Reposo (Modo Campamento):** El mapa permanece congelado y el hilo principal espera eventos de clic sobre el Panel Táctico para abrir modales de gestión.
+2. **Estado Activo (Modo Exploración):** Cada pulsación de tecla invoca `ProcesarMovimiento(nx, ny)`, actualiza las propiedades encapsuladas del objeto `Usuario`, invalida el `BufferedCanvas` (`canvasMapa.Invalidate()`) para forzar un repintado limpio en GDI+ y verifica el estado de `EntidadIris` mediante `timerIris`.
