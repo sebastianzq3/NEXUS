@@ -342,7 +342,7 @@ namespace Interfaz
                 Text = texto,
                 Bounds = bounds,
                 BackColor = colorBase,
-                ForeColor = Color.Aqua,
+                ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Consolas", 9.5F, FontStyle.Bold),
                 Cursor = Cursors.Hand,
