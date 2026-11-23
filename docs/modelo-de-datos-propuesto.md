@@ -1,62 +1,112 @@
-# Modelo de Datos Propuesto para SQL Server
+# Modelo de Datos Propuesto para Microsoft SQL Server
 
 ## 1. Justificación de la Migración
-El sistema original guardaba la partida completa en archivos `.json` planos (`Saves/Nombre.json`). Esto presenta riesgos de corrupción, dificulta las consultas complejas y no permite extender fácilmente el sistema (por ejemplo, para tablas de clasificación o logs de auditoría).
-Migrar a **SQL Server** permite normalizar los datos, garantizar la integridad referencial y preparar el terreno para funcionalidades más complejas.
+En la versión **v1.0.0**, NEXUS resolvió la seguridad de escritura en entornos instalados migrando los archivos JSON desde la carpeta del ejecutable hacia `%LocalAppData%\NEXUS\Saves\*.json`. Aunque esto permite una distribución autónoma sin servidor, la persistencia en archivos planos presenta limitaciones estructurales a largo plazo:
+- Carencia de transacciones **ACID** y riesgo de corrupción ante cierres inesperados.
+- Dificultad para generar rankings globales, auditorías de rendimiento académico en C# o gestión centralizada de preguntas.
 
-## 2. Estrategia Técnica (ORM)
-Se recomienda el uso de **Entity Framework Core (EF Core)** con enfoque *Code-First*. Las clases POCO (Plain Old C# Objects) de la BLL dictarán la estructura de las tablas mediante anotaciones de datos (Data Annotations) o Fluent API.
+Migrar a **Microsoft SQL Server** permite normalizar los datos en **Tercera Forma Normal (3FN)**, asegurar la integridad referencial y escalar tanto el progreso del juego como el banco didáctico de C#.
+
+---
+
+## 2. Estrategia de Acceso a Datos
+En coherencia con `analisis-tecnico.md`, se adopta **ADO.NET puro mediante `Microsoft.Data.SqlClient`** con consultas parametrizadas, procedimientos almacenados y transacciones explícitas (`SqlTransaction`) ejecutadas de forma asíncrona (`async/await`). Esto evita la sobrecarga de un ORM pesado, garantiza control total sobre las transacciones y previene inyección SQL.
+
+---
 
 ## 3. Diagrama Entidad-Relación Lógico (DER)
 
 ```text
-+-------------------+       +-------------------+       +-------------------+
-|     JUGADORES     | 1   1 |     PARTIDAS      | 1   N |    INVENTARIOS    |
-+-------------------+-------+-------------------+-------+-------------------+
-| PK_JugadorId      |       | PK_PartidaId      |       | PK_ItemId         |
-| Nombre            |       | FK_JugadorId (UQ) |       | FK_JugadorId      |
-| Edad              |       | VidaActual        |       | NombreObjeto      |
-| Nivel             |       | EnergiaActual     |       | UsosRestantes     |
-| Experiencia       |       | Fragmentos        |       +-------------------+
-| PuntosProficiencia|       | Restos            |
-| UpgradesInv       |       | NombreRealidad    |
-| UpgradesVida      |       | NivelEstabilidad  |
-| UpgradesEnergia   |       | CoordX            |
-+-------------------+       | CoordY            |
-                            +-------------------+
++-------------------------------+       +-----------------------------+
+|          T_JUGADORES          | 1   1 |      T_PARTIDAS_ACTIVAS     |
++-------------------------------+-------+-----------------------------+
+| PK_JugadorId (INT, IDENTITY)  |       | PK_PartidaId (INT, IDENTITY)|
+| Nombre (NVARCHAR(50), UQ)     |       | FK_JugadorId (INT, FK, UQ)  |
+| Edad (INT, CHECK >= 18)       |       | VidaActual (INT)            |
+| Nivel (INT)                   |       | EnergiaActual (INT)         |
+| Experiencia (INT)             |       | Fragmentos (INT)            |
+| PuntosProficiencia (INT)      |       | Restos (INT)                |
+| UpgradesInv (INT)             |       | NombreRealidad (NVARCHAR)   |
+| UpgradesVida (INT)            |       | TipoAnomalia (TINYINT)      |
+| UpgradesEnergia (INT)         |       | NivelEstabilidad (INT)      |
+| PreguntasCSharpRespondidas    |       | CoordX / CoordY (INT)       |
+| PreguntasCSharpAcertadas      |       | Extraida (BIT)              |
++---------------+---------------+       +-----------------------------+
+                | 1
+                |
+       +--------+--------------------+
+       | N                           | N
+       v                             v
++-----------------------------+  +------------------------------------+
+|        T_INVENTARIOS        |  |          T_OBSERVACIONES           |
++-----------------------------+  +------------------------------------+
+| PK_ItemId (INT, IDENTITY)   |  | PK_ObservacionId (INT, IDENTITY)   |
+| FK_JugadorId (INT, FK)      |  | FK_JugadorId (INT, FK)             |
+| NombreObjeto (NVARCHAR(80)) |  | TextoPista (NVARCHAR(250))         |
+| TipoAnomalia (TINYINT)      |  | FechaRegistro (DATETIME2)          |
+| UsosRestantes (INT)         |  +------------------------------------+
++-----------------------------+
+
++---------------------------------------------------------------------+
+|                     T_PREGUNTAS_CSHARP (Catálogo)                   |
++---------------------------------------------------------------------+
+| PK_PreguntaId (INT, IDENTITY)                                       |
+| Categoria (NVARCHAR(60)) | Dificultad (NVARCHAR(20))                |
+| Enunciado (NVARCHAR(300)) | CodigoEjemplo (NVARCHAR(400), NULL)     |
+| OpcionA / OpcionB / OpcionC / OpcionD (NVARCHAR(200))               |
+| IndiceCorrecto (TINYINT, CHECK 0..3)                                |
+| Explicacion (NVARCHAR(400))                                         |
++---------------------------------------------------------------------+
 ```
+
+---
 
 ## 4. Diccionario de Datos (Detalle de Tablas)
 
-### Tabla 1: `T_Jugadores`
-Almacena el perfil permanente del cadete. Persiste entre incursiones (incluso si muere).
-*   `PK_JugadorId` (INT, Primary Key, Identity): Identificador único del explorador.
-*   `Nombre` (VARCHAR(50), Unique, Not Null): Nombre del usuario en el sistema.
-*   `Edad` (INT): Dato biométrico requerido al crear el perfil.
-*   `Nivel` (INT): Nivel global acumulado.
-*   `Experiencia` (INT): Progreso hacia el siguiente nivel (0-100).
-*   `PuntosProficiencia` (INT): Puntos disponibles para gastar en mejoras.
-*   `UpgradesInv`, `UpgradesVida`, `UpgradesEnergia` (INT): Contadores para calcular el coste exponencial de la tienda.
+### 4.1. `T_Jugadores`
+Almacena el perfil persistente del cadete, su progresión global y su desempeño en el módulo didáctico de C#.
+- `PK_JugadorId` (`INT IDENTITY(1,1) PRIMARY KEY`): Identificador único del explorador.
+- `Nombre` (`NVARCHAR(50) UNIQUE NOT NULL`): Designación del cadete.
+- `Edad` (`INT NOT NULL CHECK (Edad >= 18)`): Dato biométrico validado al registro.
+- `Nivel` (`INT NOT NULL DEFAULT 1`), `Experiencia` (`INT NOT NULL DEFAULT 0`): Progresión acumulada.
+- `PuntosProficiencia` (`INT NOT NULL DEFAULT 0`): Moneda de mejoras.
+- `UpgradesInv`, `UpgradesVida`, `UpgradesEnergia` (`INT NOT NULL DEFAULT 0`): Contadores de compras para calcular la curva de costos `[1, 1, 2, 3, 5]`.
+- `PreguntasCSharpRespondidas` (`INT NOT NULL DEFAULT 0`): Total de filtros de seguridad C# afrontados.
+- `PreguntasCSharpAcertadas` (`INT NOT NULL DEFAULT 0`): Total de respuestas correctas (permite calcular precisión didáctica histórica).
 
-### Tabla 2: `T_Partidas_Activas`
-Reemplaza el estado volátil del JSON. Si un jugador abandona el juego o la simulación se cierra, sus stats locales de esa incursión se guardan aquí. Su relación con el Jugador es 1 a 1 temporal (si muere o extrae, esta fila se borra).
-*   `PK_PartidaId` (INT, Primary Key, Identity).
-*   `FK_JugadorId` (INT, Foreign Key -> T_Jugadores, Unique): Quién está jugando esta partida.
-*   `VidaActual` (INT), `EnergiaActual` (INT): Estado vital en el instante de guardado.
-*   `Fragmentos` (INT), `Restos` (INT): Inventario de recursos básicos.
-*   `NombreRealidad` (VARCHAR(100)): Designación del sector (Ej. "Vacío Olvidado").
-*   `NivelEstabilidad` (INT): De 0 a 100%.
-*   `CoordX`, `CoordY` (INT): Posición física actual del avatar en el mapa para el sistema de reanudación de coordenadas.
+### 4.2. `T_Partidas_Activas`
+Mapea el estado actual de la realidad asignada (`Realidad` + recursos volátiles de `Usuario`). Relación `1:1` mediante restricción `UNIQUE` en `FK_JugadorId`.
+- `PK_PartidaId` (`INT IDENTITY(1,1) PRIMARY KEY`).
+- `FK_JugadorId` (`INT NOT NULL UNIQUE FOREIGN KEY REFERENCES T_Jugadores(PK_JugadorId) ON DELETE CASCADE`).
+- `VidaActual` (`INT`), `EnergiaActual` (`INT`), `Fragmentos` (`INT`), `Restos` (`INT`).
+- `NombreRealidad` (`NVARCHAR(100) NOT NULL`), `TipoAnomalia` (`TINYINT NOT NULL CHECK (TipoAnomalia BETWEEN 0 AND 3)`).
+- `NivelEstabilidad` (`INT NOT NULL CHECK (NivelEstabilidad BETWEEN 0 AND 100)`).
+- `CoordX` (`INT`), `CoordY` (`INT`), `Extraida` (`BIT NOT NULL DEFAULT 0`).
 
-### Tabla 3: `T_Inventarios`
-Debido a que el catálogo de objetos base (los 40 objetos) existe como un diccionario/array estático en el código del juego, esta tabla solo necesita registrar *qué* objetos tiene actualmente el jugador en su mochila y cuánto le duran.
-*   `PK_ItemId` (INT, Primary Key, Identity).
-*   `FK_JugadorId` (INT, Foreign Key -> T_Jugadores): El dueño del objeto.
-*   `NombreObjeto` (VARCHAR(50)): Referencia clave para buscar el objeto en el catálogo en código.
-*   `UsosRestantes` (INT): Durabilidad actual, decrece al interactuar con anomalías.
+### 4.3. `T_Inventarios`
+Registra los objetos activos en la mochila del jugador (referenciando los 40 ítems del catálogo de `Objeto`) y su durabilidad restante.
+- `PK_ItemId` (`INT IDENTITY(1,1) PRIMARY KEY`).
+- `FK_JugadorId` (`INT NOT NULL FOREIGN KEY REFERENCES T_Jugadores(PK_JugadorId) ON DELETE CASCADE`).
+- `NombreObjeto` (`NVARCHAR(80) NOT NULL`), `TipoAnomalia` (`TINYINT NOT NULL`), `UsosRestantes` (`INT NOT NULL CHECK (UsosRestantes > 0)`).
 
-## 5. Implementación del Guardado
-Cuando el jugador decida "Guardar y Salir" o el juego guarde automáticamente:
-1. El `DbContext` eliminará la partida activa actual (si existe).
-2. Insertará una nueva fila en `T_Partidas_Activas` y limpiará/reinsertará las filas correspondientes en `T_Inventarios`.
-3. Actualizará los campos globales (Experiencia, Nivel) en `T_Jugadores` ejecutando un `SaveChanges()`.
+### 4.4. `T_Observaciones`
+Almacena las pistas sensoriales decodificadas con Fragmentos para deducir la anomalía del sector actual (se depura al extraer la realidad).
+- `PK_ObservacionId` (`INT IDENTITY(1,1) PRIMARY KEY`).
+- `FK_JugadorId` (`INT NOT NULL FOREIGN KEY REFERENCES T_Jugadores(PK_JugadorId) ON DELETE CASCADE`).
+- `TextoPista` (`NVARCHAR(250) NOT NULL`), `FechaRegistro` (`DATETIME2 NOT NULL DEFAULT SYSDATETIME()`).
+
+### 4.5. `T_Preguntas_CSharp`
+Permite migrar las 28 preguntas actuales de `BancoPreguntasCSharp.cs` a base de datos para agregar o editar reactivos sin recompilar `NEXUS.exe`.
+- `PK_PreguntaId` (`INT IDENTITY(1,1) PRIMARY KEY`).
+- `Categoria` (`NVARCHAR(60)`), `Dificultad` (`NVARCHAR(20)`), `Enunciado` (`NVARCHAR(300)`), `CodigoEjemplo` (`NVARCHAR(400) NULL`).
+- `OpcionA`, `OpcionB`, `OpcionC`, `OpcionD` (`NVARCHAR(200) NOT NULL`), `IndiceCorrecto` (`TINYINT CHECK (IndiceCorrecto BETWEEN 0 AND 3)`), `Explicacion` (`NVARCHAR(400) NOT NULL`).
+
+---
+
+## 5. Estrategia Transaccional de Guardado y Recuperación
+Al ejecutar `GuardarJuegoAsync(DatosPartida datos)` en `NEXUS.DAL`:
+1. Se abre una conexión `SqlConnection` y se inicia una transacción explícita (`SqlTransaction`).
+2. Se ejecuta un `UPDATE` parametrizado en `T_Jugadores` (nivel, experiencia, mejoras y contadores `PreguntasCSharp*`).
+3. Se ejecuta un `MERGE` (o `UPDATE`/`INSERT`) sobre `T_Partidas_Activas` para el `FK_JugadorId`.
+4. Se sincronizan `T_Inventarios` y `T_Observaciones` eliminando el estado anterior del jugador e insertando los elementos vigentes dentro de la misma transacción.
+5. Si todas las operaciones tienen éxito se ejecuta `transaction.CommitAsync()`; ante cualquier excepción se invoca `transaction.RollbackAsync()`, garantizando consistencia total.

@@ -1,51 +1,74 @@
-# Diseño del Juego y Experiencia de Usuario: NEXUS (Windows Forms)
+# Diseño del Juego y Experiencia de Usuario: NEXUS (v1.0 Windows Forms)
 
 ## 1. Visión del Juego
-NEXUS ha evolucionado de una aventura conversacional en consola a un **RPG táctico de supervivencia** en escritorio con perspectiva top-down 2D sobre **Windows Forms**. El jugador actúa como un Explorador encargado de adentrarse en sectores multiversales colapsados para estabilizarlos.
-La motivación principal del jugador radica en el *riesgo vs. recompensa*: cada paso en el sector consume energía vital, pero explorar más lejos otorga recursos esenciales (Restos Tecnológicos `▤` y Fragmentos de Anomalía) para sintetizar equipamiento y deducir cómo sellar las fisuras cuánticas (`಄`).
+**NEXUS** es un **RPG táctico de supervivencia con componente educativo** para escritorio Windows (C# / Windows Forms). El jugador asume el rol de un Explorador encargado de estabilizar realidades multiversales colapsadas mientras evade a la IA desertora **I.R.I.S.**
+
+La propuesta combina dos pilares de motivación:
+1. **Riesgo vs. Recompensa:** Cada 3 pasos en la cuadrícula consumen 1 punto de Energía vital, obligando a planificar rutas hacia Restos Tecnológicos (`▤`), Núcleos de Energía (`Φ`), Enemigos (`Ж`) y Fisuras Cuánticas (`಄`).
+2. **Aprendizaje Gamificado de C#:** Recargar energía exige superar un **Filtro de Seguridad C#** con preguntas reales de programación y POO, transformando la supervivencia en práctica activa de conocimientos universitarios.
+
+---
 
 ## 2. Ciclo Principal de Juego (Core Loop) y Máquina de Estados
-El ciclo de juego opera bajo una máquina de estados estricta que alterna entre dos modos contextuales:
+Al ejecutar `NEXUS.exe`, el jugador visualiza primero la pantalla de carga animada (`FrmSplash`), ingresa al **Gestor Biométrico de Perfiles** y entra a un ciclo gobernado por dos estados excluyentes:
 
 ### 2.1. Modo Campamento (Mapa Congelado / Fase de Gestión)
-Al cargar un perfil o regresar de una incursión, el jugador se encuentra a salvo en el campamento:
-* **Estado del Mapa:** El lienzo $40 \times 20$ se muestra congelado bajo un velo táctico traslúcido, bloqueando el desplazamiento para evitar gastos accidentales de energía.
-* **Opciones Habilitadas en el Panel Táctico:**
-  * **Explorar realidad:** Descongela el mapa, repuebla las entidades del sector y asigna una misión secundaria de expedición.
-  * **Inventario y síntesis:** Abre el gestor para inspeccionar ítems, descartar equipo roto, sintetizar pistas (3 Fragmentos) o ensamblar objetos (3 Restos `▤`).
-  * **Recuperar energía [+5 Recarga]:** Inicia el protocolo de soporte vital mediante minijuegos de seguridad.
-  * **Tienda de proficiencia [Mejoras]:** Permite invertir Puntos de Proficiencia para ampliar la mochila, la vida máxima o la batería cuántica.
-  * **Estado y manual / Atlas de realidades:** Consulta de progreso y escaneo del mapa multiversal de $18 \times 12$ dividido en 4 cuadrantes.
-  * **¡Iniciar extracción total! (100%):** Disponible al alcanzar el 100% de estabilidad para asegurar $+100\text{ EXP}$ y saltar a una nueva realidad.
-  * **Guardar y cambiar perfil:** Almacena el estado en JSON y retorna al selector biométrico.
+Al cargar un perfil o regresar de una expedición, el jugador permanece protegido en base:
+- **Estado del Mapa:** El lienzo $40 \times 20$ se renderiza bajo un velo táctico traslúcido con borde neón pulsante, bloqueando desplazamientos accidentales.
+- **Acciones Habilitadas en el Panel Táctico:**
+  - **Explorar realidad:** Descongela el mapa, repuebla entidades según el nivel del jugador y asigna un objetivo secundario de expedición.
+  - **Inventario y síntesis:** Inspección de ítems, descarte, síntesis de pistas sensoriales (3 Fragmentos) y crafteo de objetos (3 Restos `▤`).
+  - **Recuperar energía [+5 Recarga]:** Abre el **Filtro de Seguridad C#** (trivia didáctica).
+  - **Tienda de proficiencia [Mejoras]:** Inversión de Puntos de Proficiencia para ampliar mochila, vida máxima o batería cuántica.
+  - **Estado y manual / Atlas de realidades:** Muestra el estado del explorador, el **porcentaje de precisión en trivias C#**, el manual de supervivencia y el escáner multiversal ($18 \times 12$).
+  - **¡Iniciar extracción total! (100%):** Al alcanzar 100% de estabilidad otorga $+100\text{ EXP}$ y asigna una nueva realidad.
+  - **Guardar y cambiar perfil:** Persiste el progreso en `%LocalAppData%\NEXUS\Saves` y vuelve al selector de perfiles.
 
 ### 2.2. Modo Exploración (Incursión Táctica Activa)
-Al desplegarse en la realidad, el mapa se activa y los botones administrativos del campamento se bloquean temporalmente:
-* **Desplazamiento y Supervivencia:** El jugador se mueve por la grilla $40 \times 20$. Cada 3 pasos consume 1 punto de Energía. Si la energía cae a 0, el soporte vital colapsa y el explorador es extraído de emergencia de vuelta al campamento.
-* **Retorno Contextual (`Volver al campamento [ESPACIO]`):** Durante la exploración, el botón superior del Panel Táctico permanece deshabilitado salvo cuando el cadete se posiciona exactamente sobre el **Ancla Base (`☗`)** o un **Campamento Temporal (`☖`)**. En ese instante, el botón **se ilumina en color verde brillante** y permite regresar al Modo Campamento (consumiendo el campamento temporal si se usó `☖`).
+Al desplegarse en el sector, se bloquean los menús administrativos y el lienzo $40 \times 20$ cobra vida:
+- **Desplazamiento y Energía:** Movimiento por teclado (`W, A, S, D` o Flechas) o clic ortogonal con el ratón. Cada 3 pasos se descuenta 1 de Energía; llegar a 0 activa una extracción de emergencia al campamento.
+- **Retorno Contextual (`Volver al campamento [ESPACIO]`):** Solo se habilita (iluminándose en verde brillante) cuando el avatar `@` pisa el **Ancla Base (`☗`)** o un **Campamento Temporal (`☖`)**.
 
-## 3. Mecánicas y Reglas en Interfaz Gráfica
-* **Movimiento Híbrido:** El jugador se desplaza utilizando el teclado (`W, A, S, D` o Flechas direccionales) mediante el evento `KeyDown`, o haciendo clic directamente con el ratón sobre cualquier casilla ortogonalmente adyacente.
-* **Recarga de Energía Contextual:** Los protocolos de recarga solo pueden iniciarse manualmente desde el Campamento (mapa congelado), o bien **se disparan automáticamente** en medio de la exploración cuando el jugador pisa un Núcleo de Energía (`Φ`).
-* **Feedback Visual de I.R.I.S.:** Un temporizador asíncrono (`timerIris`) evalúa la estabilidad de la realidad. Si cae por debajo del 50%, el marco del mapa parpadea en naranja/rojo y la IA emite alertas en el registro de telemetría. Al bajar del 20%, interrumpe la partida exigiendo una purga total de energía.
-* **Interacciones Modales:** Chocar con un enemigo (`Ж`) o pisar una fisura (`಄`) despliega ventanas modales dedicadas que pausan el movimiento en el mapa hasta resolver el encuentro.
+---
 
-## 4. Diseño de Pantallas Implementadas
+## 3. Mecánicas, Reglas y Retroalimentación Visual
 
-### Pantalla 1: Gestor Biométrico de Perfiles
-* **Componentes:** Tabla `DataGridView` central que lista todos los perfiles alojados en `Saves/*.json` (Designación, Edad, Nivel, Vida, Energía, Sector y Estabilidad).
-* **Acciones:** Panel de registro con validación de edad mínima (18 años), botón de carga rápida y purga definitiva de archivos.
+### 3.1. Sistema Didáctico: Filtro de Seguridad C# (Recarga de Energía)
+- **Disparadores:** Puede abrirse manualmente desde el Campamento o se dispara automáticamente al pisar un Núcleo de Energía (`Φ`) durante la exploración.
+- **Dinámica:** Presenta 1 pregunta seleccionada sin repeticiones consecutivas de un banco barajado (Fisher-Yates) de **28 preguntas de C# y POO** (Sintaxis/Tipos, POO, Colecciones/LINQ y Excepciones/Memoria/.NET).
+- **Presión Táctica:** Temporizador regresivo visual de **25 segundos** (barra + contador que cambia de verde a amarillo a los 10 s y rojo a los 5 s).
+- **Resolución y Aprendizaje:** Al seleccionar una de las 4 opciones (`A, B, C, D`) o agotarse el tiempo, los botones se bloquean, se resalta la opción correcta en verde y el error en rojo, y se despliega una **Explicación Didáctica** obligatoria antes de pulsar `CONTINUAR`.
+- **Balance:**
+  - Acierto: **`+5 Energía`**.
+  - Fallo o tiempo agotado con `Estabilidad > 50%`: **`+1 Energía`**.
+  - Fallo o tiempo agotado con `Estabilidad <= 50%`: **`+1 Energía` y `-15% Estabilidad`**.
 
-### Pantalla 2: Interfaz Principal (HUD + Mapa GDI+ + Panel Táctico)
-* **HUD Superior:** Indicadores de nivel, estado de I.R.I.S., objetivo secundario activo y tres barras de progreso (`ProgressBar`) para Vida, Energía y Estabilidad.
-* **Lienzo Central (`BufferedCanvas`):** Panel personalizado de $840 \times 520\text{ px}$ con `DoubleBuffered = true` que dibuja la matriz $40 \times 20$ mediante GDI+ sin parpadeos.
-* **Panel Táctico Lateral (Derecho):** Botonera limpia sin numeración con bloqueo contextual según el estado del juego, acompañada en la parte inferior por el **Registro de Telemetría (`RichTextBox`)** con marcas de tiempo y código de colores.
+### 3.2. Animaciones y Feedback Kinestésico (30 FPS)
+- **Deslizamiento Interpolado:** El marcador del cadete (`@`) se interpola suavemente entre casillas en lugar de teletransportarse bruscamente.
+- **Auras Pulsantes y Scanline:** El jugador (`@`), las anomalías (`಄`), núcleos (`Φ`) y enemigos (`Ж`) emiten pulsos neón continuos; un *scanline* táctico translúcido recorre el mapa verticalmente.
+- **Partículas y Textos Flotantes:** Eventos clave generan estallidos de partículas neón y texto ascendente que se desvanece (`+1 ▤`, `+HP`, `+30% EST`, `+1 FRAG`, `+75 EXP`, `+5 E`).
+- **Combate Dinámico:** Los ataques pesados y el daño recibido disparan un destello de color (*flash*) y micro-sacudida (*screen shake*) breve en la ventana de combate.
+- **Hover Interactivo:** Todos los botones tácticos y modales responden visualmente al paso del cursor.
 
-### Pantalla 3: Ventanas Modales (Inventario, Combate, Tienda, Soporte Vital y Atlas)
-* **Inventario y Síntesis:** Selector interactivo (`ListBox`) vinculado en tiempo real a un visor de análisis técnico, lista de observaciones desbloqueadas y botones de crafteo/despliegue en anomalías.
-* **Combate Táctico:** Barras de salud enfrentadas para el Cadete y el Enemigo con botones para *Ataque Ligero (0 E)*, *Ataque Pesado (1 E)*, *Bloquear (-50% daño)* y *Escapar (1 E)*.
-* **Atlas de Realidades:** Renderizado gráfico GDI+ de la matriz $18 \times 12$ coloreada por cuadrantes cuánticos (Tiempo, Espacio, Mente y Silencio) con escáner de coordenadas.
+### 3.3. Vigilancia de I.R.I.S.
+- `Estabilidad > 50%`: Estado **Dormida**.
+- `20% < Estabilidad <= 50%`: Estado **Acechando** (borde del mapa parpadea en naranja y alertas en telemetría).
+- `Estabilidad <= 20%`: **Invasión Crítica** (interrupción modal que exige purgar toda la energía para recuperar `+15%` estabilidad o sufrir desconexión).
 
-## 5. Experiencia de Usuario (UX) y Rendimiento
-* **Consistencia Visual:** Paleta cyberpunk oscura (`RGB(14, 16, 22)`) con tipografía monoespaciada (`Consolas`) y acentos neón semánticos (Verde para éxito/jugador, Cian para sistema, Violeta para anomalías, Rojo para peligro).
-* **Optimización GDI+:** El uso de un único control `BufferedCanvas` evita la creación de 800 controles individuales en memoria, garantizando una respuesta instantánea al teclado y ratón.
+---
+
+## 4. Pantallas Implementadas
+
+| Pantalla | Componentes Clave | Propósito UX |
+| :--- | :--- | :--- |
+| **0. Splash Screen (`FrmSplash`)** | Logo panorámico (`nexus_logo.png`), borde neón pulsante, *scanline*, barra cuántica animada, créditos de autor (`Sebastián Zubieta Quiroga`). | Identidad visual profesional de arranque (omitible con clic o tecla). |
+| **1. Gestor Biométrico (`pnlPerfiles`)** | Banner superior con `nexus_logo.png`, tabla `DataGridView` de perfiles en `%LocalAppData%`, formulario de alta (edad ≥ 18) y pie de créditos. | Selección, creación y purga rápida de partidas multi-slot. |
+| **2. Simulador Principal (`pnlJuego`)** | HUD superior con 3 `ProgressBar` (Vida, Energía, Estabilidad), lienzo animado `BufferedCanvas` ($40 \times 20$), Panel Táctico contextual y Log `RichTextBox`. | Visibilidad total del estado del sector sin saturación cognitiva. |
+| **3. Modales Especializados** | **Combate** (barras + FX), **Inventario/Síntesis**, **Filtro C#** (temporizador 25 s + código + explicación), **Tienda de Proficiencia**, **Atlas ($18 \times 12$)** y **Estado/Manual** (incluye precisión C#). | Enfocar decisiones críticas pausando el desplazamiento en el mapa. |
+
+---
+
+## 5. Criterios de Experiencia de Usuario (UX) y Alcance
+- **Consistencia Estética:** Paleta cyberpunk oscura (`#0A0C12` / `RGB(14,16,22)`), tipografía monoespaciada `Consolas`, acentos semánticos (verde = jugador/éxito, cian = sistema, magenta = anomalías, amarillo = pistas/alertas, rojo = peligro).
+- **Prevención de Errores:** Bloqueo contextual de botones según modo Campamento/Exploración, confirmación en acciones destructivas (purgar perfil/descartar ítem) y sanitización de nombres de archivo al crear perfiles.
+- **Restricciones Respetadas:** Evolución fiel del código H3 hacia Windows Forms con instalador autónomo funcional en Windows y persistencia compatible con futuras migraciones a SQL Server.

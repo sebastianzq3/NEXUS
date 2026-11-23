@@ -1,58 +1,80 @@
-# Arquitectura Propuesta: Evolución al Modelo N-Capas
+# Arquitectura Propuesta: Evolución al Modelo N-Capas y SQL Server
 
 ## 1. Estado de Avance de la Migración
-La evolución arquitectónica de **NEXUS** desde su versión monolítica de consola (H3) se ha estructurado en dos fases estratégicas:
+La evolución arquitectónica de **NEXUS** se estructuró en dos fases estratégicas:
 
-* **Fase 1 (COMPLETADA - Proyecto `Interfaz`):** Migración total de la interfaz de consola hacia **Windows Forms**, reemplazando el bucle síncrono `while(conectado)` por una arquitectura **Orientada a Eventos (*Event-Driven*)**, renderizado matricial con doble búfer (`BufferedCanvas` en GDI+) y control de estados entre **Modo Campamento** y **Modo Exploración**.
-* **Fase 2 (EN PROYECCIÓN - Desacoplamiento N-Tier y SQL Server):** Extracción de las clases de dominio actualmente alojadas en `Form1.cs` hacia bibliotecas de clases independientes (`NEXUS.BLL` y `NEXUS.DAL`) y sustitución del guardado en archivos `.json` por persistencia transaccional en **Microsoft SQL Server**.
+- **Fase 1 (COMPLETADA — v1.0.0 en `src/Interfaz`):**
+  - Migración total desde consola hacia **Windows Forms** con arquitectura *Event-Driven*.
+  - Renderizado matricial GDI+ con doble búfer (`BufferedCanvas`) y ciclo de animación a ~30 FPS (`timerAnimacion` + partículas + interpolación).
+  - Incorporación de pantalla de inicio (`FrmSplash`), branding (`Assets/`) y módulo didáctico desacoplado (`BancoPreguntasCSharp.cs`).
+  - Persistencia segura en `%LocalAppData%\NEXUS\Saves` y empaquetado autónomo con **Inno Setup** (`NEXUS_Setup_v1.0.exe`).
+- **Fase 2 (EN PROYECCIÓN — Separación N-Tier y SQL Server):**
+  - Extracción física de las clases de dominio (actualmente en `Form1.cs`) hacia bibliotecas de clases independientes (`NEXUS.Entities`, `NEXUS.BLL`, `NEXUS.DAL`).
+  - Sustitución de archivos `.json` locales por persistencia transaccional en **Microsoft SQL Server** mediante **ADO.NET (`Microsoft.Data.SqlClient`)**.
 
 ---
 
-## 2. Capas del Sistema (Arquitectura Objetivo 3-Tier)
+## 2. Capas del Sistema (Arquitectura Objetivo N-Tier)
 
-### 2.1. Capa de Presentación (`Interfaz` / `NEXUS.GUI`) — *Implementada*
-Proyecto de tipo *Windows Forms App*.
-* **Responsabilidad:** Capturar la entrada del usuario (teclado `WASD`/Flechas, clics en grilla y botones tácticos) y renderizar el estado del simulador en pantalla.
-* **Componentes actuales:**
-  * `Form1` (Gestor de Perfiles Biométricos, HUD Superior, Lienzo GDI+ $40 \times 20$, Panel Táctico Contextual y Registro de Telemetría).
-  * Diálogos Modales integrados: Combate Táctico, Inventario y Síntesis, Soporte Vital, Tienda de Proficiencia y Atlas Multiversal ($18 \times 12$).
+### 2.1. Capa de Presentación (`NEXUS.GUI` / Proyecto `Interfaz`) — *Implementada*
+Proyecto de tipo *Windows Forms App* (`net10.0-windows`).
+- **Responsabilidad:** Capturar eventos de usuario (teclado, ratón, timers), ejecutar el renderizado GDI+ y delegar reglas de negocio a la BLL.
+- **Componentes:** `FrmSplash`, `Form1` (gestión de perfiles, HUD, `BufferedCanvas`, panel táctico, log de telemetría) y diálogos modales (Combate, Inventario, Filtro de Seguridad C#, Tienda, Atlas).
 
-### 2.2. Capa de Lógica de Negocio (`NEXUS.BLL`) — *Lógica validada lista para extracción*
-Proyecto de tipo *Class Library* (Biblioteca de clases).
-* **Responsabilidad:** Contener todas las reglas del universo de NEXUS sin referencias a `System.Windows.Forms`.
-* **Componentes:**
-  * **Entidades Core:** `Entidad`, `Usuario`, `Enemigo`, `Realidad`, `Objeto`, `EntidadIris`, `AtlasRealidades` y `DatosPartida`.
-  * **Servicios de Dominio:** Validación de desplazamientos, cálculo de curvas de coste en la tienda (`[1, 1, 2, 3, 5]`), resolución de combates y evaluación de vulnerabilidad de I.R.I.S.
+### 2.2. Capa de Entidades y Lógica de Negocio (`NEXUS.BLL`) — *Validada, lista para extracción*
+Proyecto de tipo *Class Library* sin dependencias de `System.Windows.Forms`.
+- **Entidades de Dominio:** `Entidad`, `Usuario` (incluyendo métricas didácticas C#), `Enemigo`, `Realidad`, `Objeto`, `EntidadIris`, `AtlasRealidades`, `PreguntaCSharp`.
+- **Servicios de Dominio:**
+  - `ExploracionService`: validación de movimiento en grilla $40 \times 20$, consumo de energía y eventos de casilla.
+  - `CombateService`: resolución de turnos, daño ligero/pesado, bloqueo y probabilidad de escape.
+  - `TriviaCSharpService`: administración del banco de preguntas, barajado Fisher-Yates y cálculo de recompensas/penalizaciones.
+  - `IrisMonitorService`: evaluación de umbrales de estabilidad (`>50%`, `21-50%`, `<=20%`).
 
 ### 2.3. Capa de Acceso a Datos (`NEXUS.DAL`) — *Fase de Base de Datos*
-Proyecto de tipo *Class Library*.
-* **Responsabilidad:** Actuar como puente transaccional entre la Lógica de Negocio y **Microsoft SQL Server**, reemplazando la carpeta local `Saves/*.json`.
-* **Componentes:**
-  * **Conectividad / ORM:** Implementación mediante `Microsoft.Data.SqlClient` (ADO.NET) o `Entity Framework Core` (`NexusContext`).
-  * **Repositorios:** Clases estandarizadas (`JugadorRepository`, `PartidaRepository`, `InventarioRepository`) con operaciones CRUD sobre las tablas `T_Jugadores`, `T_Partidas_Activas` y `T_Inventarios`.
+Proyecto de tipo *Class Library* dependiente de `Microsoft.Data.SqlClient`.
+- **Responsabilidad:** Encapsular la conectividad segura con SQL Server mediante consultas parametrizadas, procedimientos almacenados y transacciones ACID (`SqlTransaction`), ejecutadas con patrones asíncronos (`async/await`) para no bloquear el hilo de interfaz.
+- **Repositorios:**
+  - `JugadorRepository`: CRUD de perfiles, progresión de nivel, mejoras y estadísticas de precisión C#.
+  - `PartidaRepository`: guardado atómico del estado de la realidad activa, coordenadas y estabilidad.
+  - `InventarioRepository`: persistencia de ítems activos con su durabilidad y pistas sensoriales.
+  - `PreguntaRepository`: carga extensible del banco de preguntas C# desde base de datos.
 
 ---
 
 ## 3. Diagrama de Flujo y Dependencias
 
 ```text
-[ INTERFAZ GRÁFICA WINDOWS FORMS ] (Proyecto: Interfaz)
-       │
-       │ (Dispara eventos KeyDown, MouseClick, Timer.Tick)
-       ▼
-[ LÓGICA DE NEGOCIO Y ENTIDADES ] (Clases de Dominio / NEXUS.BLL)
-       │
-       │ (Serialización JSON actual / Futura llamada a Repositorios)
-       ▼
-[ CAPA DE PERSISTENCIA DE DATOS ] (Saves/*.json -> NEXUS.DAL)
-       │
-       ▼
-[ MOTOR RELACIONAL SQL SERVER ]
++-------------------------------------------------------------------+
+|               CAPA DE PRESENTACIÓN (Interfaz / GUI)               |
+|  FrmSplash | Form1 (HUD + BufferedCanvas 30 FPS) | Modales UI     |
++---------------------------------+---------------------------------+
+                                  | Eventos (KeyDown, Click, Timers)
+                                  v
++-------------------------------------------------------------------+
+|              CAPA DE LÓGICA DE NEGOCIO (NEXUS.BLL)                |
+|  Entidades (Usuario, Realidad, Objeto, EntidadIris)               |
+|  Servicios (Exploracion, Combate, TriviaCSharp, IrisMonitor)      |
++---------------------------------+---------------------------------+
+                                  | DTOs / Contratos de Repositorio
+                                  v
++-------------------------------------------------------------------+
+|               CAPA DE ACCESO A DATOS (NEXUS.DAL)                  |
+|  Actual: JSON en %LocalAppData%\NEXUS\Saves                       |
+|  Objetivo: ADO.NET (Microsoft.Data.SqlClient + SqlTransaction)    |
++---------------------------------+---------------------------------+
+                                  | Consultas parametrizadas / SP
+                                  v
++-------------------------------------------------------------------+
+|                   MICROSOFT SQL SERVER (NexusDB)                  |
+|  T_Jugadores | T_Partidas_Activas | T_Inventarios | T_Preguntas   |
++-------------------------------------------------------------------+
 ```
 
 ---
 
-## 4. Consolidación del Bucle de Juego Orientado a Eventos
-El cambio arquitectónico más importante ya operativo en el proyecto `Interfaz` es la sustitución del bucle infinito de consola por el despacho de mensajes nativo de Windows Forms:
-1. **Estado en Reposo (Modo Campamento):** El mapa permanece congelado y el hilo principal espera eventos de clic sobre el Panel Táctico para abrir modales de gestión.
-2. **Estado Activo (Modo Exploración):** Cada pulsación de tecla invoca `ProcesarMovimiento(nx, ny)`, actualiza las propiedades encapsuladas del objeto `Usuario`, invalida el `BufferedCanvas` (`canvasMapa.Invalidate()`) para forzar un repintado limpio en GDI+ y verifica el estado de `EntidadIris` mediante `timerIris`.
+## 4. Arquitectura de Temporizadores y Bucle Orientado a Eventos
+Para mantener fluidez visual sin congelar la interfaz ni introducir condiciones de carrera, el sistema separa responsabilidades por frecuencia:
+1. **`timerAnimacion` (33 ms / ~30 FPS):** Exclusivo para presentación (interpolación `visualPx/visualPy`, pulsos neón, *scanline*, partículas y textos flotantes). Nunca realiza I/O en disco ni red.
+2. **`timerIris` (1200 ms):** Monitoreo de amenaza y parpadeo de alerta; se pausa automáticamente durante diálogos críticos (`mostrandoDialogoIris`).
+3. **Temporizadores Locales Modales:** El cronómetro de 25 s en `AbrirModalSoporteVital` y el efecto *flash/shake* de 25 ms en `AbrirModalCombate` se instancian dentro del diálogo modal y se liberan obligatoriamente en su evento `FormClosed`.
+4. **Proyección Asíncrona hacia SQL Server:** Las operaciones futuras contra `NEXUS.DAL` utilizarán `async/await` (`OpenAsync`, `ExecuteNonQueryAsync`, `ExecuteReaderAsync`) para evitar bloqueos en el *UI Thread*.

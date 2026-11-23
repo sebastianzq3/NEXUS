@@ -1,9 +1,9 @@
 # Análisis Técnico: Alternativas, Decisiones y Verificación Tecnológica
 
 ## 1. Introducción y Contexto del Problema
-El proyecto **NEXUS** requiere una evolución arquitectónica fundamental para superar las restricciones de su versión de consola (H3), con el fin de migrar hacia un videojuego gráfico de escritorio basado en **C# con Windows Forms** y un motor de base de datos relacional robusto sobre **Microsoft SQL Server**.
+El proyecto **NEXUS** requirió una evolución técnica integral desde su prototipo en consola (H3) hacia un videojuego gráfico animado en **C# (.NET 10 / Windows Forms)** con enfoque didáctico, instalador autónomo para Windows y arquitectura preparada para persistencia en **Microsoft SQL Server**.
 
-El objetivo de este documento es evaluar comparativamente las alternativas técnicas viables, fundamentar las decisiones de ingeniería de software adoptadas, detallar las fuentes bibliográficas de referencia y documentar el protocolo de verificación de la información técnica asistida por Inteligencia Artificial.
+Este documento evalúa las alternativas técnicas analizadas, justifica las decisiones implementadas en la versión **v1.0.0** y las proyectadas para la fase SQL Server, detalla las fuentes de referencia y documenta la verificación crítica de la información obtenida con apoyo de Inteligencia Artificial.
 
 ---
 
@@ -13,85 +13,77 @@ El objetivo de este documento es evaluar comparativamente las alternativas técn
 
 | Alternativa Evaluada | Ventajas | Desventajas | Veredicto |
 | :--- | :--- | :--- | :--- |
-| **Windows Forms (WinForms)** | Integración nativa e inmediata con el runtime de .NET; curva de aprendizaje accesible; manejo directo de eventos GDI+ (`PaintEventArgs`) para renderizado en cuadrícula 2D; requisito contractual del proyecto. | Modelo de pintado clásico por CPU; riesgo de parpadeo (*flickering*) en animaciones si no se configura doble búfer (*DoubleBuffering*); no desacopla el diseño de forma declarativa como XAML. | **SELECCIONADA** |
-| **WPF (Windows Presentation Foundation)** | Separación estricta entre vista y lógica mediante XAML y patrón MVVM; aceleración por hardware (DirectX); soporte superior para animaciones y transformaciones de interfaz. | Mayor complejidad de configuración y curva de aprendizaje; no cumple con el requerimiento académico específico establecido para el Hito. | **DESCARTADA** |
-| **Consola Avanzada (Spectre.Console / Terminal.Gui)** | Conserva la estética original retro/cyberpunk; portabilidad en múltiples plataformas y terminales. | Persiste la limitación de interacción por ratón; resolución gráfica restringida a caracteres ANSI; no satisface la transición a interfaz gráfica solicitada. | **DESCARTADA** |
+| **Windows Forms + GDI+ (`BufferedCanvas`)** | Integración nativa con .NET 10; control directo de pintado 2D (`PaintEventArgs`) ideal para grilla $40 \times 20$ y animaciones ligeras; cumple el requisito contractual de la asignatura. | Renderizado por CPU; requiere doble búfer explícito y gestión manual (`Dispose`) de pinceles, fuentes y temporizadores para evitar parpadeo y fugas de memoria. | **SELECCIONADA** |
+| **WPF (Windows Presentation Foundation)** | Aceleración por hardware (DirectX) y separación declarativa con XAML/MVVM. | Curva de configuración mayor; no se alinea con el requerimiento específico de Windows Forms establecido para el proyecto. | **DESCARTADA** |
+| **Consola Avanzada (`Spectre.Console`)** | Mantiene la estética retro original de H3 y es multiplataforma. | Sin interacción fluida por ratón, sin animaciones gráficas reales ni identidad visual mediante assets PNG/ICO. | **DESCARTADA** |
 
 ---
 
-### 2.2. Capa de Acceso a Datos y Persistencia
+### 2.2. Estrategia de Animación 2D en Windows Forms
 
 | Alternativa Evaluada | Ventajas | Desventajas | Veredicto |
 | :--- | :--- | :--- | :--- |
-| **ADO.NET Puro (`Microsoft.Data.SqlClient`) con Procedimientos Almacenados** | Control granular absoluto sobre las consultas; ejecución de alto rendimiento con latencia mínima; comprensión transparente de la interacción transaccional con SQL Server; ideal para contextos académicos rigurosos. | Requiere mayor volumen de código repetitivo (*boilerplate*); mapeo manual de objetos relacionales (`SqlDataReader` a clases POCO). | **RECOMENDADA (Híbrida)** |
-| **Entity Framework Core (EF Core 8/9)** | Mapeo Objeto-Relacional (ORM) automatizado; soporte nativo para migraciones y Change Tracking; abstracción fluida con LINQ. | Sobrecarga de memoria en aplicaciones ligeras de escritorio; curva de configuración de DbContext y generación de claves ajenas complejas para inventarios dinámicos. | **DESCARTADA** |
-| **Dapper (Micro-ORM)** | Rendimiento prácticamente idéntico a ADO.NET manual; simplifica el mapeo relacional a objetos de dominio; permite escribir SQL directo sin la sobrecarga de un ORM completo. | Requiere dependencias externas mediante NuGet; menor visibilidad pedagógica de los mecanismos internos de conexión `SqlConnection`/`SqlCommand`. | **COMPLEMENTARIA** |
-| **Archivos JSON Planos (Estado Actual)** | Portabilidad simple; cero dependencias de servidores externos. | Nulo aislamiento transaccional (ACID); riesgo crítico de corrupción por concurrencia; ineficiente para consultas estructuradas o auditorías. | **DESCARTADA (Sustituida)** |
+| **Un `Timer` de UI a ~30 FPS (33 ms) + GDI+ en `BufferedCanvas`** | Movimiento interpolado suave, pulsos neón, *scanline* y partículas sin crear múltiples controles; cero parpadeo gracias a `DoubleBuffered = true`. | Requiere liberar recursos GDI+ con `using` en cada `OnPaint` y detener el temporizador en `FormClosing`. | **SELECCIONADA** |
+| **Matriz de 800 `PictureBox` / `Button`** | Sencillo de conceptualizar inicialmente. | Agotamiento de manejadores de ventana (*GDI Handle exhaustion*), alto consumo de RAM y parpadeo severo al redibujar. | **DESCARTADA** |
+| **Motor de Juegos Externo (MonoGame / Godot)** | Rendimiento gráfico superior por GPU. | Rompe la restricción de utilizar Windows Forms estándar y exige reescribir por completo los modales administrativos. | **DESCARTADA** |
 
 ---
 
-### 2.3. Motor de Persistencia Relacional
+### 2.3. Ruta de Almacenamiento Local y Estrategia de Persistencia
 
 | Alternativa Evaluada | Ventajas | Desventajas | Veredicto |
 | :--- | :--- | :--- | :--- |
-| **Microsoft SQL Server (Developer / Express Edition)** | Soporte enterprise para integridad referencial foránea, tipos complejos, transacciones ACID nativas, índices agrupados y procedimientos almacenados; estándar en la industria .NET. | Requiere la instalación del servicio local o contenedor Docker (`mssql-server`); mayor consumo de recursos en la máquina cliente. | **SELECCIONADA** |
-| **SQLite** | Motor embebido sin necesidad de configurar servidor; almacenamiento en archivo único local; altamente portable. | Menor compatibilidad con tipos y sintaxis avanzados de T-SQL; restricciones de concurrencia en escrituras complejas; no cumple con la restricción técnica del hito. | **DESCARTADA** |
+| **JSON en `%LocalAppData%\NEXUS\Saves` (v1.0.0 Actual)** | Totalmente compatible con instalaciones en `C:\Program Files\NEXUS` (sin errores UAC); cero dependencias externas para el instalador autónomo; migración automática desde `Saves/` local. | Sin soporte multiusuario concurrente ni consultas relacionales avanzadas. | **IMPLEMENTADA (v1.0)** |
+| **JSON en carpeta relativa `"Saves"` junto al `.exe`** | Fácil de ubicar en desarrollo dentro de `bin\Debug`. | Falla con `UnauthorizedAccessException` al instalar el software en `Program Files` como usuario estándar. | **DESCARTADA (Sustituida)** |
+| **SQL Server + ADO.NET (`Microsoft.Data.SqlClient`)** | Integridad referencial en 3FN, transacciones ACID (`SqlTransaction`), control total de consultas parametrizadas y soporte para banco centralizado de preguntas C#. | Requiere servicio SQL Server activo; mayor volumen de código de mapeo frente a un ORM. | **RECOMENDADA (Fase SQL)** |
+| **Entity Framework Core (EF Core)** | Mapeo automático ORM y migraciones *Code-First*. | Mayor sobrecarga de memoria y abstracción menos transparente para demostrar control SQL y transacciones manuales en Programación II. | **DESCARTADA** |
 
 ---
 
-## 3. Decisiones Arquitectónicas Recomendadas
+### 2.4. Empaquetado y Distribución del Instalador (`.exe`)
 
-A partir de la evaluación técnica, se definen los siguientes lineamientos obligatorios para la evolución del código:
+| Alternativa Evaluada | Ventajas | Desventajas | Veredicto |
+| :--- | :--- | :--- | :--- |
+| **`dotnet publish` Self-Contained (`win-x64`, ReadyToRun) + Inno Setup** | Funciona en cualquier PC Windows limpia sin requerir .NET Runtime preinstalado; genera un único instalador profesional (`NEXUS_Setup_v1.0.exe`) con accesos directos, ícono y desinstalador limpio. | Tamaño mayor del ejecutable final al incluir el runtime embebido (~60–90 MB comprimido). | **SELECCIONADA** |
+| **Publicación *Framework-Dependent* en archivo `.zip`** | Peso mínimo (pocos megabytes). | Falla si la PC destino no tiene instalado exactamente `.NET 10 Desktop Runtime`; experiencia menos profesional sin asistente ni desinstalador. | **DESCARTADA** |
+| **ClickOnce / MSIX** | Integración directa con Visual Studio y actualizaciones automáticas. | Exige certificados de firma digital de confianza para evitar bloqueos en equipos limpios fuera de entorno corporativo. | **DESCARTADA** |
 
-1. **Adopción de Arquitectura en Capas Limpias (N-Tier / Clean Architecture Simplificada):**
-   * **Capa de Presentación:** Formularios Windows Forms independientes (`FrmMenuPrincipal`, `FrmExploracion`, `FrmCombate`, `FrmInventario`).
-   * **Capa de Lógica de Negocio (BLL / Dominio):** Clases puras de C# sin dependencias visuales (`CadeteService`, `CombateManager`, `ExploracionEngine`, `IrisAIController`).
-   * **Capa de Acceso a Datos (DAL):** Repositorios dedicados (`UsuarioRepository`, `PartidaRepository`, `RealidadRepository`) que interactúen con SQL Server mediante `Microsoft.Data.SqlClient`.
+---
 
-2. **Mitigación de Rendimiento Visual en Windows Forms:**
-   * La cuadrícula de exploración de $40 \times 20$ no debe implementarse mediante una matriz pesada de $800$ controles `Button` o `Label`, ya que esto saturaría el manejador de ventanas del sistema operativo (*Handle exhaustion*).
-   * **Solución Técnica:** Se implementará un control de usuario personalizado (*UserControl*) o un `PictureBox` principal con `DoubleBuffered = true`, renderizando el mapa en memoria mediante el evento `OnPaint` y la clase `Graphics` (GDI+).
-
-3. **Estrategia de Normalización en Base de Datos:**
-   * Sustituir la persistencia atómica monolítica de JSON por un esquema relacional normalizado en 3FN:
-     * `Jugadores` (Datos biométricos y estado base).
-     * `Realidades` (Estado, estabilidad, coordenadas y tipo de anomalía).
-     * `Inventario` (Relación relacional N:M entre el jugador y los objetos catalogados, registrando durabilidad actual).
-     * `Observaciones` (Pistas sensoriales desbloqueadas por partida).
-     * `EstadisticasPartida` (Historial de expediciones, enemigos eliminados y veces que IRIS fue repelida).
+## 3. Decisiones Arquitectónicas Recomendadas y Aplicadas
+1. **Separación de Temporizadores y Ciclo de Vida Seguro:** `timerAnimacion` (33 ms) queda restringido al renderizado en `BufferedCanvas`, mientras `timerIris` (1200 ms) gestiona la amenaza y los modales (Combate y Trivia C#) manejan sus propios temporizadores efímeros con liberación obligatoria en `FormClosed`.
+2. **Desacoplamiento del Módulo Didáctico:** La lógica de preguntas de C# reside en `BancoPreguntasCSharp.cs` con barajado **Fisher-Yates**, lista para ser migrada a un repositorio SQL (`T_Preguntas_CSharp`) sin alterar el modal de interfaz.
+3. **Resiliencia de Recursos Gráficos:** Todos los recursos de `Assets/` se cargan desde `AppContext.BaseDirectory` con captura segura de excepciones y respaldo dibujado en GDI+, evitando caídas si un archivo gráfico se mueve o elimina.
+4. **Automatización de Release:** El flujo reproducible `scripts/publish.ps1` → `installer/NEXUS_Setup.iss` → `docs/pruebas-instalacion-limpia.md` asegura que cada nueva versión sea compilable y auditable en entorno limpio.
 
 ---
 
 ## 4. Fuentes Técnicas y Bibliografía de Referencia
-
-1. **Microsoft Learn - Windows Forms Documentation:**
-   * *Architecture and Rendering in Windows Forms:* Documentación sobre el ciclo de vida de controles, despacho de mensajes de Windows (`WndProc`) y gestión de repintado sin parpadeos mediante `SetStyle(ControlStyles.OptimizedDoubleBuffer, true)`.
-   * URL: `https://learn.microsoft.com/dotnet/desktop/winforms/`
-2. **Microsoft Learn - ADO.NET and SqlClient:**
-   * *Best Practices for Asynchronous Database Operations:* Guías para el uso de `OpenAsync()`, `ExecuteReaderAsync()` y transacciones con `SqlTransaction` para evitar congelar el hilo de interfaz de usuario (`UI Thread`).
-   * URL: `https://learn.microsoft.com/dotnet/framework/data/adonet/`
-3. **Martin, Robert C. (Uncle Bob) - "Clean Architecture":**
-   * Principio de Inversión de Dependencias (DIP) y Separación de Intereses (SoC) aplicados al desacoplamiento entre UI y lógica de simulación.
-4. **Richter, Jeffrey - "CLR via C#":**
-   * Gestión de memoria del Garbage Collector al manipular colecciones dinámicas y matrices bidimensionales continuas en juegos basados en .NET.
+1. **Microsoft Learn — Windows Forms & GDI+:** Documentación sobre `DoubleBuffered`, `ControlStyles.OptimizedDoubleBuffer`, `PaintEventArgs` y liberación de objetos `IDisposable` (`Pen`, `Brush`, `Font`).  
+   URL: `https://learn.microsoft.com/dotnet/desktop/winforms/`
+2. **Microsoft Learn — .NET Application Publishing (`dotnet publish`):** Guías oficiales sobre despliegues *self-contained*, identificadores de runtime (`win-x64`) y compilación *ReadyToRun*.  
+   URL: `https://learn.microsoft.com/dotnet/core/deploying/`
+3. **Microsoft Learn — ADO.NET (`Microsoft.Data.SqlClient`):** Buenas prácticas de ejecución asíncrona (`OpenAsync`, `ExecuteReaderAsync`) y manejo de transacciones `SqlTransaction`.  
+   URL: `https://learn.microsoft.com/sql/connect/ado-net/`
+4. **JRSoftware — Inno Setup Documentation:** Referencia oficial de directivas `[Setup]`, `[Files]`, `[Icons]`, `[Run]` y constante `{autopf}` para instaladores Windows de 64 bits.  
+   URL: `https://jrsoftware.org/ishelp/`
+5. **Martin, Robert C. — *Clean Architecture*:** Separación de intereses (SoC) y desacoplamiento entre presentación, lógica de dominio y persistencia.
 
 ---
 
 ## 5. Protocolo de Verificación de Información Obtenida con IA
+Cada propuesta técnica asistida por IA fue sometida a validación práctica antes de integrarse al repositorio:
 
-Para garantizar la fiabilidad técnica del código generado y de la documentación, se ejecutó un protocolo de verificación sistemático en tres etapas:
+### 5.1. Verificación de Permisos de Escritura en `C:\Program Files`
+- **Riesgo detectado:** El código original guardaba las partidas en `"Saves"` (ruta relativa junto al `.exe`), y una primera configuración del instalador no contemplaba restricciones UAC de Windows.
+- **Prueba de verificación:** Al instalar en `{autopf}\NEXUS`, Windows restringe la escritura de usuarios estándar dentro de `Program Files`, provocando `UnauthorizedAccessException` al guardar perfiles JSON.
+- **Corrección aplicada:** Se redirigió el almacenamiento a `Environment.SpecialFolder.LocalApplicationData` (`%LocalAppData%\NEXUS\Saves`) con migración automática de partidas locales y se incorporó su validación explícita en `docs/pruebas-instalacion-limpia.md`.
 
-### 5.1. Verificación Sintáctica y de Compatibilidad de APIs
-* **Hallazgo de IA verificado:** Durante el análisis de WinForms, se propuso el uso de `ControlStyles.AllPaintingInWmPaint` junto a `DoubleBuffer`.
-* **Prueba de Verificación:** Se consultó la documentación oficial de .NET 8/9, confirmando que la asignación directa de la propiedad `DoubleBuffered = true` en controles derivados de `Panel` o formularios encapsula estos flags de forma segura sin requerir llamadas nativas a Win32.
-* **Resultado:** **Validado y adoptado.**
+### 5.2. Verificación de Consumo de Memoria en Animación GDI+ a 30 FPS
+- **Hallazgo de IA verificado:** Se propuso crear instancias de `SolidBrush`, `Pen` y `Font` en cada tick del `Paint` (30 veces por segundo) para partículas y textos flotantes.
+- **Prueba de verificación:** Sin liberación explícita, GDI+ acumula manejadores nativos no administrados hasta degradar la interfaz.
+- **Corrección aplicada:** Se envolvieron todas las instancias gráficas en declaraciones `using` y se aseguró la detención y `Dispose()` de `timerAnimacion`, `timerTrivia`, `timerFx` y `logoPerfilesImg` al cerrar los formularios.
 
-### 5.2. Verificación de Bloqueos en Hilos de UI (Deadlocks)
-* **Hallazgo de IA verificado:** Se sugirió el uso de llamadas síncronas a base de datos (`cmd.ExecuteReader()`) dentro de botones de acción en formularios.
-* **Prueba de Verificación:** Al realizar operaciones de entrada/salida de red contra SQL Server en el hilo principal de WinForms, la ventana se congela e inhabilita eventos de teclado.
-* **Corrección:** Se descartó la sugerencia inicial síncrona y se estandarizó el uso de patrones asíncronos `async/await` (`await cmd.ExecuteReaderAsync()`) para mantener una interfaz reactiva.
-
-### 5.3. Integridad Relacional vs. Serialización NoSQL
-* **Hallazgo de IA verificado:** Una sugerencia automatizada propuso almacenar el inventario completo como un campo `NVARCHAR(MAX)` con un string JSON embebido dentro de la tabla de SQL Server.
-* **Prueba de Verificación:** Aunque técnicamente viable mediante `JSON_VALUE`, esta alternativa viola los estándares de diseño relacional exigidos por la cátedra para el modelado de datos en SQL Server y obstaculiza la integridad referencial de claves foráneas con la tabla `Objetos`.
-* **Corrección:** Se forzó el diseño relacional formal mediante una tabla intermedia `InventariosJugador` con llaves foráneas a `Jugadores` y `ObjetosCatalogo`.
+### 5.3. Verificación de Bloqueos en Hilo de UI y Coherencia Relacional
+- **Hallazgo de IA verificado:** Se evaluaron consultas síncronas (`ExecuteReader()`) y almacenamiento de inventarios como texto JSON dentro de una columna `NVARCHAR(MAX)` en SQL Server.
+- **Prueba y corrección:** Ambas prácticas se descartaron: las llamadas síncronas congelan el *UI Thread* de WinForms (corregido mediante `async/await`), y el JSON embebido incumple la normalización 3FN exigida por la cátedra (corregido mediante tablas relacionales `T_Inventarios` y `T_Observaciones` con llaves foráneas en `modelo-de-datos-propuesto.md`).
