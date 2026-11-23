@@ -3,9 +3,27 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
+    <Nullable>disable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
+
+    <!-- Nombre limpio del ejecutable y metadatos de ensamblado -->
+    <AssemblyName>NEXUS</AssemblyName>
+    <RootNamespace>Interfaz</RootNamespace>
+    <ApplicationIcon>Assets\nexus_icon.ico</ApplicationIcon>
+    <Product>NEXUS</Product>
+    <Authors>Sebastián Zubieta Quiroga</Authors>
+    <Company>UNIFRANZ - Ingeniería de Sistemas</Company>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Description>Simulador Multiversal NEXUS con módulo didáctico de C#</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
 </Project>

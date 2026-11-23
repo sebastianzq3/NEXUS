@@ -12,6 +12,12 @@ namespace Interfaz
         static void Main()
         {
             ApplicationConfiguration.Initialize();
+
+            using (FrmSplash splash = new FrmSplash())
+            {
+                splash.ShowDialog();
+            }
+
             Application.Run(new Form1());
         }
     }

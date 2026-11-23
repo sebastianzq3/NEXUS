@@ -12,7 +12,11 @@ namespace Interfaz
     public partial class Form1 : Form
     {
         // --- ESTADO GLOBAL DE LA SESIÓN ---
-        private readonly string directorioSaves = "Saves";
+        private readonly string directorioSaves = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "NEXUS",
+            "Saves");
+
         private List<(string Ruta, DatosPartida Datos)> perfilesCargados = new List<(string, DatosPartida)>();
 
         private Usuario cadete = null;
@@ -25,12 +29,27 @@ namespace Interfaz
         private bool mostrandoDialogoIris = false;
 
         // --- ESTADO DE LA EXPEDICIÓN ACTUAL (MAPA 40x20) ---
-        // false = En Campamento (Mapa congelado, opciones del Hub habilitadas)
-        // true  = Explorando Sector (Mapa activo, opciones del Hub bloqueadas)
         private bool enExpedicion = false;
         private int px = 0;
         private int py = 0;
         private int contadorPasos = 0;
+
+        // --- ANIMACIÓN EN TIEMPO REAL (~30 FPS), PARTÍCULAS Y TEXTOS FLOTANTES ---
+        private System.Windows.Forms.Timer timerAnimacion;
+        private float visualPx = 0f;
+        private float visualPy = 0f;
+        private float faseAnimacion = 0f;
+        private float scanlineY = 0f;
+        private readonly List<Particula> particulas = new List<Particula>();
+        private readonly List<TextoFlotante> textosFlotantes = new List<TextoFlotante>();
+        private readonly Random rndAnim = new Random();
+
+        // --- RECURSOS VISUALES Y HOVER ---
+        private Image logoPerfilesImg = null;
+        private readonly Dictionary<Button, Color> coloresBaseBotones = new Dictionary<Button, Color>();
+
+        // --- MÓDULO DIDÁCTICO C# ---
+        private readonly BancoPreguntasCSharp bancoPreguntas = new BancoPreguntasCSharp();
 
         // Objetivo secundario de expedición
         private readonly string[] nombresObj = { "Exterminador (Mata Enemigos Ж)", "Curioso (Visita Eventos '?')", "Chatarrero (Recoge Restos ▤)" };
@@ -39,11 +58,214 @@ namespace Interfaz
         private int progresoObj = 0;
         private bool objCompletado = false;
 
+        private class Particula
+        {
+            public float X, Y, Vx, Vy, Vida, VidaMax, Radio;
+            public Color Color;
+        }
+
+        private class TextoFlotante
+        {
+            public float X, Y, Vida, VidaMax;
+            public string Texto;
+            public Color Color;
+        }
+
         public Form1()
         {
             InitializeComponent();
+            ConfigurarIdentidadVisual();
             ConfigurarEventos();
+            InicializarAnimacionMapa();
             InicializarSistemaPerfiles();
+        }
+
+        // =====================================================================
+        // 0. IDENTIDAD VISUAL, ASSETS, CRÉDITOS Y ANIMACIÓN BASE
+        // =====================================================================
+        private void ConfigurarIdentidadVisual()
+        {
+            this.Text = "NEXUS — Simulador Multiversal | Por Sebastián Zubieta Quiroga";
+
+            // Ícono de ventana desde Assets
+            try
+            {
+                string rutaIco = Path.Combine(AppContext.BaseDirectory, "Assets", "nexus_icon.ico");
+                if (File.Exists(rutaIco))
+                {
+                    this.Icon = new Icon(rutaIco);
+                }
+            }
+            catch { }
+
+            // Cargar logo panorámico desde Assets (con fallback GDI+ si no existe)
+            try
+            {
+                string rutaLogo = Path.Combine(AppContext.BaseDirectory, "Assets", "nexus_logo.png");
+                if (File.Exists(rutaLogo))
+                {
+                    using FileStream fs = new FileStream(rutaLogo, FileMode.Open, FileAccess.Read);
+                    logoPerfilesImg = Image.FromStream(fs);
+                }
+            }
+            catch
+            {
+                logoPerfilesImg = null;
+            }
+
+            // Integrar logo y pie de créditos en pnlPerfiles sin duplicar controles
+            if (pnlPerfiles != null && pnlPerfiles.Controls["picLogoNexus"] == null)
+            {
+                const int alturaBanner = 105;
+                int minTop = int.MaxValue;
+                foreach (Control c in pnlPerfiles.Controls)
+                {
+                    if (c.Dock == DockStyle.None && c.Top < minTop)
+                        minTop = c.Top;
+                }
+
+                // Si los controles existentes están muy arriba, desplazarlos suavemente para dar espacio al logo
+                if (minTop < alturaBanner + 12 && minTop != int.MaxValue)
+                {
+                    int desplazamiento = (alturaBanner + 12) - minTop;
+                    foreach (Control c in pnlPerfiles.Controls)
+                    {
+                        if (c.Dock == DockStyle.None)
+                            c.Top += desplazamiento;
+                    }
+                }
+
+                PictureBox picLogo = new PictureBox
+                {
+                    Name = "picLogoNexus",
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    BackColor = Color.FromArgb(10, 12, 18),
+                    Size = new Size(340, alturaBanner - 8),
+                    Location = new Point(Math.Max(10, (pnlPerfiles.ClientSize.Width - 340) / 2), 8),
+                    Anchor = AnchorStyles.Top
+                };
+
+                if (logoPerfilesImg != null)
+                {
+                    picLogo.Image = logoPerfilesImg;
+                }
+                else
+                {
+                    picLogo.Paint += (s, e) =>
+                    {
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        using Font f = new Font("Consolas", 26f, FontStyle.Bold);
+                        using Pen p = new Pen(Color.Cyan, 1.5f);
+                        using StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        e.Graphics.DrawRectangle(p, 1, 1, picLogo.Width - 3, picLogo.Height - 3);
+                        e.Graphics.DrawString("N E X U S", f, Brushes.Cyan, picLogo.ClientRectangle, sf);
+                    };
+                }
+
+                pnlPerfiles.Controls.Add(picLogo);
+                picLogo.BringToFront();
+
+                Label lblPie = new Label
+                {
+                    Name = "lblCreditosPie",
+                    Text = "Desarrollado por Sebastián Zubieta Quiroga — Ingeniería de Sistemas",
+                    Dock = DockStyle.Bottom,
+                    Height = 24,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    ForeColor = Color.FromArgb(135, 165, 195),
+                    BackColor = Color.FromArgb(10, 12, 18),
+                    Font = new Font("Consolas", 8.5f, FontStyle.Regular)
+                };
+                pnlPerfiles.Controls.Add(lblPie);
+                lblPie.BringToFront();
+            }
+        }
+
+        private void InicializarAnimacionMapa()
+        {
+            timerAnimacion = new System.Windows.Forms.Timer { Interval = 33 };
+            timerAnimacion.Tick += TimerAnimacion_Tick;
+        }
+
+        private void TimerAnimacion_Tick(object sender, EventArgs e)
+        {
+            if (!pnlJuego.Visible || realidadAsignada == null) return;
+
+            faseAnimacion += 0.14f;
+            if (faseAnimacion > Math.PI * 200) faseAnimacion = 0f;
+
+            // Interpolación suave de la posición del jugador
+            visualPx += (px - visualPx) * 0.35f;
+            visualPy += (py - visualPy) * 0.35f;
+            if (Math.Abs(px - visualPx) < 0.01f) visualPx = px;
+            if (Math.Abs(py - visualPy) < 0.01f) visualPy = py;
+
+            // Scanline táctico
+            if (canvasMapa.ClientSize.Height > 0)
+                scanlineY = (scanlineY + 2.2f) % canvasMapa.ClientSize.Height;
+
+            // Actualizar partículas
+            for (int i = particulas.Count - 1; i >= 0; i--)
+            {
+                Particula p = particulas[i];
+                p.X += p.Vx;
+                p.Y += p.Vy;
+                p.Vx *= 0.94f;
+                p.Vy *= 0.94f;
+                p.Vida -= 0.033f;
+                if (p.Vida <= 0f) particulas.RemoveAt(i);
+            }
+
+            // Actualizar textos flotantes
+            for (int i = textosFlotantes.Count - 1; i >= 0; i--)
+            {
+                TextoFlotante tf = textosFlotantes[i];
+                tf.Y -= 0.9f;
+                tf.Vida -= 0.033f;
+                if (tf.Vida <= 0f) textosFlotantes.RemoveAt(i);
+            }
+
+            canvasMapa.Invalidate();
+        }
+
+        private void GenerarEfectoCelda(int gx, int gy, Color color, string texto, int cantidadParticulas = 12)
+        {
+            if (realidadAsignada == null || canvasMapa.ClientSize.Width <= 0 || canvasMapa.ClientSize.Height <= 0) return;
+
+            float cellW = (float)canvasMapa.ClientSize.Width / realidadAsignada.AnchoMapa;
+            float cellH = (float)canvasMapa.ClientSize.Height / realidadAsignada.AltoMapa;
+            float cx = (gx + 0.5f) * cellW;
+            float cy = (gy + 0.5f) * cellH;
+
+            for (int i = 0; i < cantidadParticulas; i++)
+            {
+                double ang = rndAnim.NextDouble() * Math.PI * 2.0;
+                float vel = 1.0f + (float)rndAnim.NextDouble() * 2.8f;
+                particulas.Add(new Particula
+                {
+                    X = cx,
+                    Y = cy,
+                    Vx = (float)(Math.Cos(ang) * vel),
+                    Vy = (float)(Math.Sin(ang) * vel),
+                    Vida = 0.75f,
+                    VidaMax = 0.75f,
+                    Radio = 2.0f + (float)rndAnim.NextDouble() * 2.5f,
+                    Color = color
+                });
+            }
+
+            if (!string.IsNullOrEmpty(texto))
+            {
+                textosFlotantes.Add(new TextoFlotante
+                {
+                    X = cx,
+                    Y = cy - 6f,
+                    Vida = 0.85f,
+                    VidaMax = 0.85f,
+                    Texto = texto,
+                    Color = color
+                });
+            }
         }
 
         private void ConfigurarEventos()
@@ -64,22 +286,79 @@ namespace Interfaz
             this.btnExtraerRealidad.Click += (s, e) => IniciarExtraccionRealidad();
             this.btnDesconectar.Click += (s, e) => DesconectarYVolverAPerfiles();
 
+            // Hover suave en todos los botones principales
+            Button[] botonesPrincipales =
+            {
+                btnCargarPerfil, btnCrearPerfil, btnPurgarPerfil,
+                btnExtraerSector, btnNuevaIncursion, btnInventario, btnRecargarEnergia,
+                btnTienda, btnManualEstado, btnAtlas, btnExtraerRealidad, btnDesconectar
+            };
+            foreach (Button b in botonesPrincipales)
+                RegistrarHoverBoton(b);
+
             // Eventos del Mapa (Pintado GDI+, Teclado y Ratón)
             this.canvasMapa.Paint += CanvasMapa_Paint;
             this.canvasMapa.MouseClick += CanvasMapa_MouseClick;
             this.KeyDown += Form1_KeyDown;
 
-            // Timer de I.R.I.S.
+            // Timer de I.R.I.S. y cierre limpio
             this.timerIris.Tick += TimerIris_Tick;
+            this.FormClosing += Form1_FormClosing;
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            timerAnimacion?.Stop();
+            timerAnimacion?.Dispose();
+            timerIris?.Stop();
+            GuardarJuego();
+            logoPerfilesImg?.Dispose();
+        }
+
+        private Button CrearBotonInteractivo(string texto, Rectangle bounds, Color colorFondo)
+        {
+            Button btn = CrearBotonEstilizado(texto, bounds, colorFondo);
+            RegistrarHoverBoton(btn);
+            return btn;
+        }
+
+        private void RegistrarHoverBoton(Button btn)
+        {
+            if (btn == null || coloresBaseBotones.ContainsKey(btn)) return;
+            coloresBaseBotones[btn] = btn.BackColor;
+
+            btn.MouseEnter += (s, e) =>
+            {
+                if (!btn.Enabled) return;
+                Color baseColor = coloresBaseBotones.TryGetValue(btn, out Color c) ? c : btn.BackColor;
+                btn.BackColor = AclararColor(baseColor, 28);
+            };
+            btn.MouseLeave += (s, e) =>
+            {
+                if (!btn.Enabled) return;
+                if (coloresBaseBotones.TryGetValue(btn, out Color c))
+                    btn.BackColor = c;
+            };
+        }
+
+        private static Color AclararColor(Color c, int delta)
+        {
+            return Color.FromArgb(
+                c.A,
+                Math.Min(255, c.R + delta),
+                Math.Min(255, c.G + delta),
+                Math.Min(255, c.B + delta));
         }
 
         // =====================================================================
-        // 1. GESTIÓN DE PERFILES Y GUARDADO MULTI-SLOT (JSON)
+        // 1. GESTIÓN DE PERFILES Y GUARDADO MULTI-SLOT (JSON EN %LocalAppData%)
         // =====================================================================
         private void InicializarSistemaPerfiles()
         {
             if (!Directory.Exists(directorioSaves))
                 Directory.CreateDirectory(directorioSaves);
+
+            MigrarSavesLocalesSiExisten();
 
             dgvPerfiles.Columns.Clear();
             dgvPerfiles.Columns.Add("ColNombre", "DESIGNACIÓN (CADETE)");
@@ -91,6 +370,33 @@ namespace Interfaz
             dgvPerfiles.Columns.Add("ColEstabilidad", "ESTABILIDAD");
 
             RefrescarTablaPerfiles();
+        }
+
+        private void MigrarSavesLocalesSiExisten()
+        {
+            string[] posiblesOrigenes =
+            {
+                Path.Combine(AppContext.BaseDirectory, "Saves"),
+                Path.Combine(Directory.GetCurrentDirectory(), "Saves")
+            };
+
+            foreach (string origen in posiblesOrigenes)
+            {
+                try
+                {
+                    if (!Directory.Exists(origen)) continue;
+                    if (string.Equals(Path.GetFullPath(origen), Path.GetFullPath(directorioSaves), StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    foreach (string archivo in Directory.GetFiles(origen, "*.json"))
+                    {
+                        string destino = Path.Combine(directorioSaves, Path.GetFileName(archivo));
+                        if (!File.Exists(destino))
+                            File.Copy(archivo, destino);
+                    }
+                }
+                catch { }
+            }
         }
 
         private void RefrescarTablaPerfiles()
@@ -165,7 +471,9 @@ namespace Interfaz
             int edad = (int)numNuevaEdad.Value;
             cadete = new Usuario(nombre, edad);
             realidadAsignada = new Realidad();
-            rutaGuardadoActual = Path.Combine(directorioSaves, $"{cadete.Nombre}.json");
+
+            string nombreSeguro = string.Join("_", nombre.Split(Path.GetInvalidFileNameChars()));
+            rutaGuardadoActual = Path.Combine(directorioSaves, $"{nombreSeguro}.json");
 
             GuardarJuego();
             txtNuevoNombre.Clear();
@@ -190,6 +498,9 @@ namespace Interfaz
         private void GuardarJuego()
         {
             if (cadete == null || realidadAsignada == null || string.IsNullOrEmpty(rutaGuardadoActual)) return;
+            if (!Directory.Exists(directorioSaves))
+                Directory.CreateDirectory(directorioSaves);
+
             DatosPartida datos = new DatosPartida { Jugador = cadete, RealidadActual = realidadAsignada };
             var opciones = new JsonSerializerOptions { WriteIndented = true };
             File.WriteAllText(rutaGuardadoActual, JsonSerializer.Serialize(datos, opciones));
@@ -207,15 +518,19 @@ namespace Interfaz
             rtbLog.Clear();
             AgregarLog(mensajeInicial, Color.SpringGreen);
 
-            // Posicionamos en la base pero iniciamos en el Campamento (mapa congelado)
             realidadAsignada.InicializarMapaSiNoExiste();
             px = realidadAsignada.CadeteStartX;
             py = realidadAsignada.CadeteStartY;
+            visualPx = px;
+            visualPy = py;
+            particulas.Clear();
+            textosFlotantes.Clear();
             enExpedicion = false;
 
             ActualizarHUD();
             canvasMapa.Invalidate();
             timerIris.Start();
+            timerAnimacion.Start();
             this.Focus();
         }
 
@@ -224,6 +539,7 @@ namespace Interfaz
             if (enExpedicion) return;
             GuardarJuego();
             timerIris.Stop();
+            timerAnimacion.Stop();
             enExpedicion = false;
             pnlJuego.Visible = false;
             pnlPerfiles.Visible = true;
@@ -247,6 +563,8 @@ namespace Interfaz
             realidadAsignada.RellenarEntidadesLocales(cadete.Nivel);
             px = realidadAsignada.CadeteStartX;
             py = realidadAsignada.CadeteStartY;
+            visualPx = px;
+            visualPy = py;
             contadorPasos = 0;
 
             Random rnd = new Random();
@@ -256,6 +574,7 @@ namespace Interfaz
             objCompletado = false;
             enExpedicion = true;
 
+            GenerarEfectoCelda(px, py, Color.Cyan, "DESPLIEGUE", 16);
             AgregarLog($"Desplegado en '{realidadAsignada.Nombre}'. Objetivo extra: {nombresObj[tipoObj]}.", Color.Cyan);
             ActualizarHUD();
             canvasMapa.Invalidate();
@@ -293,7 +612,6 @@ namespace Interfaz
             int clickX = (int)(e.X / cellW);
             int clickY = (int)(e.Y / cellH);
 
-            // Permitir mover si hace clic en una casilla adyacente ortogonal
             if (Math.Abs(clickX - px) + Math.Abs(clickY - py) == 1)
             {
                 ProcesarMovimiento(clickX, clickY);
@@ -309,24 +627,22 @@ namespace Interfaz
 
             char destino = realidadAsignada.MapaLocal[ny, nx];
 
-            // Evento sorpresa '?'
             if (destino == '?')
             {
                 char[] opcionesRnd = { '♡', '▤', 'Ж', 'Φ', '಄', '☖' };
                 destino = opcionesRnd[new Random().Next(opcionesRnd.Length)];
                 realidadAsignada.MapaLocal[ny, nx] = destino;
+                GenerarEfectoCelda(nx, ny, Color.Gold, $"EVENTO {destino}", 14);
                 AgregarLog($"¡El evento sorpresa '?' resultó ser '{destino}'!", Color.Gold);
                 if (tipoObj == 1 && !objCompletado) progresoObj++;
             }
 
-            // Bloqueo por muros del vacío cuántico
             if (destino == '█' || destino == '▓' || destino == '▒' || destino == '░')
             {
                 AgregarLog("El vacío cuántico es denso. No puedes avanzar por ahí.", Color.LightCoral);
                 return;
             }
 
-            // Movimiento válido
             px = nx;
             py = ny;
             contadorPasos++;
@@ -349,11 +665,10 @@ namespace Interfaz
                 }
             }
 
-            // Resolución de casilla pisada
             if (destino == 'Φ')
             {
                 realidadAsignada.MapaLocal[py, px] = '·';
-                AgregarLog("Núcleo de Energía (Φ) detectado. Iniciando protocolo de recarga automática...", Color.SpringGreen);
+                AgregarLog("Núcleo de Energía (Φ) detectado. Iniciando filtro de seguridad C#...", Color.SpringGreen);
                 ActualizarHUD();
                 canvasMapa.Invalidate();
                 AbrirModalSoporteVital(true);
@@ -363,12 +678,14 @@ namespace Interfaz
                 int cura = new Random().Next(20, 36);
                 cadete.Vida += cura;
                 realidadAsignada.MapaLocal[py, px] = '·';
+                GenerarEfectoCelda(px, py, Color.SpringGreen, $"+{cura} HP", 14);
                 AgregarLog($"Regeneración biológica aplicada (+{cura} Vida).", Color.SpringGreen);
             }
             else if (destino == '▤')
             {
                 cadete.Restos++;
                 realidadAsignada.MapaLocal[py, px] = '·';
+                GenerarEfectoCelda(px, py, Color.Orange, "+1 ▤", 12);
                 AgregarLog("Has recolectado Restos Tecnológicos (+1 ▤).", Color.Orange);
                 if (tipoObj == 2 && !objCompletado) progresoObj++;
             }
@@ -395,15 +712,14 @@ namespace Interfaz
                 AbrirModalCombate(nx, ny);
             }
 
-            // Verificar objetivo secundario
             if (progresoObj >= metaObj && !objCompletado)
             {
                 objCompletado = true;
                 cadete.Experiencia += 75;
+                GenerarEfectoCelda(px, py, Color.Gold, "+75 EXP", 18);
                 AgregarLog("¡OBJETIVO EXTRA DE EXPEDICIÓN COMPLETADO! (+75 EXP).", Color.SpringGreen);
             }
 
-            // Si tras pisar Φ sigue con 0 de energía, forzar regreso al campamento
             if (enExpedicion && cadete.Energia <= 0)
             {
                 enExpedicion = false;
@@ -446,7 +762,7 @@ namespace Interfaz
         }
 
         // =====================================================================
-        // 3. RENDERIZADO GDI+ DEL MAPA 40x20
+        // 3. RENDERIZADO GDI+ ANIMADO DEL MAPA 40x20
         // =====================================================================
         private void CanvasMapa_Paint(object sender, PaintEventArgs e)
         {
@@ -461,9 +777,13 @@ namespace Interfaz
             float cellW = (float)canvasMapa.ClientSize.Width / cols;
             float cellH = (float)canvasMapa.ClientSize.Height / rows;
 
+            float pulso = (float)((Math.Sin(faseAnimacion) + 1.0) * 0.5); // [0..1]
+            int alphaPulso = 45 + (int)(pulso * 85);
+
             using Font fontTile = new Font("Consolas", 11F, FontStyle.Bold);
+            using Font fontFlotante = new Font("Consolas", 9F, FontStyle.Bold);
             using Pen gridPen = new Pen(Color.FromArgb(20, 26, 36), 1F);
-            StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+            using StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
 
             for (int y = 0; y < rows; y++)
             {
@@ -472,27 +792,29 @@ namespace Interfaz
                     RectangleF rect = new RectangleF(x * cellW, y * cellH, cellW, cellH);
                     char tile = realidadAsignada.MapaLocal[y, x];
 
-                    // Fondo de celda según tipo
                     if (tile == '█' || tile == '▓' || tile == '▒' || tile == '░')
                     {
                         int shade = tile == '█' ? 42 : (tile == '▓' ? 34 : (tile == '▒' ? 28 : 22));
                         using SolidBrush bMuro = new SolidBrush(Color.FromArgb(shade, shade + 4, shade + 12));
                         g.FillRectangle(bMuro, rect);
-                    }
-                    else
-                    {
-                        g.DrawRectangle(gridPen, rect.X, rect.Y, rect.Width, rect.Height);
+                        continue;
                     }
 
-                    // Dibujar Cadete o Entidad
-                    if (x == px && y == py)
+                    g.DrawRectangle(gridPen, rect.X, rect.Y, rect.Width, rect.Height);
+
+                    if (tile != '·')
                     {
-                        using SolidBrush bPlayerBg = new SolidBrush(enExpedicion ? Color.FromArgb(0, 110, 60) : Color.FromArgb(0, 70, 100));
-                        g.FillEllipse(bPlayerBg, rect.X + 1, rect.Y + 2, rect.Width - 2, rect.Height - 4);
-                        g.DrawString("@", fontTile, Brushes.SpringGreen, rect, sf);
-                    }
-                    else if (tile != '·')
-                    {
+                        // Auras pulsantes neón para entidades clave
+                        if (tile == '಄' || tile == 'Φ' || tile == 'Ж')
+                        {
+                            Color cAura = tile == '಄' ? Color.FromArgb(alphaPulso, 213, 0, 249)
+                                        : (tile == 'Φ' ? Color.FromArgb(alphaPulso, 0, 255, 130)
+                                                       : Color.FromArgb(alphaPulso, 255, 45, 65));
+                            float pad = 1.5f - pulso * 2.0f;
+                            using SolidBrush bAura = new SolidBrush(cAura);
+                            g.FillEllipse(bAura, rect.X + pad, rect.Y + pad, rect.Width - pad * 2, rect.Height - pad * 2);
+                        }
+
                         Brush colorGlifo = Brushes.Gray;
                         switch (tile)
                         {
@@ -515,15 +837,54 @@ namespace Interfaz
                 }
             }
 
-            // Si está en el campamento (mapa congelado), mostrar velo e indicador táctico
+            // Dibujar Cadete con interpolación suave y aura pulsante
+            RectangleF playerRect = new RectangleF(visualPx * cellW, visualPy * cellH, cellW, cellH);
+            float expand = pulso * 3.0f;
+            using (SolidBrush bPlayerGlow = new SolidBrush(Color.FromArgb(55 + (int)(pulso * 65), 0, 255, 160)))
+            {
+                g.FillEllipse(bPlayerGlow, playerRect.X - expand, playerRect.Y - expand, playerRect.Width + expand * 2, playerRect.Height + expand * 2);
+            }
+            using (SolidBrush bPlayerBg = new SolidBrush(enExpedicion ? Color.FromArgb(0, 125, 70) : Color.FromArgb(0, 75, 110)))
+            {
+                g.FillEllipse(bPlayerBg, playerRect.X + 1, playerRect.Y + 2, playerRect.Width - 2, playerRect.Height - 4);
+            }
+            g.DrawString("@", fontTile, Brushes.SpringGreen, playerRect, sf);
+
+            // Partículas neón
+            foreach (Particula p in particulas)
+            {
+                int a = Math.Max(0, Math.Min(255, (int)(255 * (p.Vida / p.VidaMax))));
+                using SolidBrush bp = new SolidBrush(Color.FromArgb(a, p.Color));
+                g.FillEllipse(bp, p.X - p.Radio, p.Y - p.Radio, p.Radio * 2, p.Radio * 2);
+            }
+
+            // Textos flotantes
+            foreach (TextoFlotante tf in textosFlotantes)
+            {
+                int a = Math.Max(0, Math.Min(255, (int)(255 * (tf.Vida / tf.VidaMax))));
+                using SolidBrush bShadow = new SolidBrush(Color.FromArgb(a, 0, 0, 0));
+                using SolidBrush bTxt = new SolidBrush(Color.FromArgb(a, tf.Color));
+                RectangleF rTxt = new RectangleF(tf.X - 60, tf.Y - 10, 120, 20);
+                g.DrawString(tf.Texto, fontFlotante, bShadow, new RectangleF(rTxt.X + 1, rTxt.Y + 1, rTxt.Width, rTxt.Height), sf);
+                g.DrawString(tf.Texto, fontFlotante, bTxt, rTxt, sf);
+            }
+
+            // Scanline táctico sutil
+            using (SolidBrush bScan = new SolidBrush(Color.FromArgb(18, 0, 255, 255)))
+            {
+                g.FillRectangle(bScan, 0, scanlineY, canvasMapa.ClientSize.Width, 6f);
+            }
+
+            // Velo en modo Campamento
             if (!enExpedicion)
             {
                 using SolidBrush velo = new SolidBrush(Color.FromArgb(115, 8, 12, 20));
                 g.FillRectangle(velo, 0, 0, canvasMapa.ClientSize.Width, canvasMapa.ClientSize.Height);
 
-                Rectangle bannerRect = new Rectangle(140, canvasMapa.ClientSize.Height / 2 - 32, 560, 64);
+                int bw = Math.Min(560, canvasMapa.ClientSize.Width - 40);
+                Rectangle bannerRect = new Rectangle((canvasMapa.ClientSize.Width - bw) / 2, canvasMapa.ClientSize.Height / 2 - 32, bw, 64);
                 using SolidBrush bannerBg = new SolidBrush(Color.FromArgb(230, 16, 24, 38));
-                using Pen bannerPen = new Pen(Color.Cyan, 2F);
+                using Pen bannerPen = new Pen(Color.FromArgb(140 + (int)(pulso * 115), 0, 229, 255), 2F);
                 g.FillRectangle(bannerBg, bannerRect);
                 g.DrawRectangle(bannerPen, bannerRect);
 
@@ -532,7 +893,7 @@ namespace Interfaz
                     fBanner, Brushes.Cyan, bannerRect, sf);
             }
 
-            // Borde de alerta si I.R.I.S. está en estado crítico o acechando
+            // Borde de alerta si I.R.I.S. está acechando o invadiendo
             if (parpadeoAlerta && irisActual != null && irisActual.EstadoActual != EstadoIris.Dormida)
             {
                 Color cAlerta = irisActual.EstadoActual == EstadoIris.InvasionCritica ? Color.Red : Color.OrangeRed;
@@ -542,12 +903,13 @@ namespace Interfaz
         }
 
         // =====================================================================
-        // 4. MODAL DE COMBATE TÁCTICO POR TURNOS
+        // 4. MODAL DE COMBATE TÁCTICO CON FLASH Y MICRO-SACUDIDA (SCREEN SHAKE)
         // =====================================================================
         private void AbrirModalCombate(int enemX, int enemY)
         {
             Enemigo enemigo = new Enemigo();
             bool bloqueoActivo = false;
+            Color fondoNormal = Color.FromArgb(18, 14, 22);
 
             using Form frmCombate = new Form
             {
@@ -558,7 +920,7 @@ namespace Interfaz
                 MaximizeBox = false,
                 MinimizeBox = false,
                 ControlBox = false,
-                BackColor = Color.FromArgb(18, 14, 22),
+                BackColor = fondoNormal,
                 ForeColor = Color.White,
                 Font = new Font("Consolas", 10F)
             };
@@ -579,10 +941,52 @@ namespace Interfaz
                 Text = $"¡Un {enemigo.Nombre} hostil bloquea tu paso!\nPoder ofensivo enemigo: {enemigo.DañoBase} | Probabilidad de escape: {enemigo.ProbabilidadEscape}%"
             };
 
-            Button btnLigero = CrearBotonEstilizado("Ataque Ligero (0 E)", new Rectangle(25, 290, 240, 42), Color.FromArgb(0, 120, 140));
-            Button btnPesado = CrearBotonEstilizado("Ataque Pesado (1 E)", new Rectangle(280, 290, 240, 42), Color.FromArgb(160, 50, 60));
-            Button btnBloquear = CrearBotonEstilizado("Bloquear (0 E | -50% Daño)", new Rectangle(25, 342, 240, 42), Color.FromArgb(70, 90, 130));
-            Button btnEscapar = CrearBotonEstilizado($"Escapar (1 E | {enemigo.ProbabilidadEscape}%)", new Rectangle(280, 342, 240, 42), Color.FromArgb(140, 110, 30));
+            Button btnLigero = CrearBotonInteractivo("Ataque Ligero (0 E)", new Rectangle(25, 290, 240, 42), Color.FromArgb(0, 120, 140));
+            Button btnPesado = CrearBotonInteractivo("Ataque Pesado (1 E)", new Rectangle(280, 290, 240, 42), Color.FromArgb(160, 50, 60));
+            Button btnBloquear = CrearBotonInteractivo("Bloquear (0 E | -50% Daño)", new Rectangle(25, 342, 240, 42), Color.FromArgb(70, 90, 130));
+            Button btnEscapar = CrearBotonInteractivo($"Escapar (1 E | {enemigo.ProbabilidadEscape}%)", new Rectangle(280, 342, 240, 42), Color.FromArgb(140, 110, 30));
+
+            // Timer para flash + screen shake breve
+            System.Windows.Forms.Timer timerFx = new System.Windows.Forms.Timer { Interval = 25 };
+            Point origenVentana = Point.Empty;
+            int framesFx = 0;
+            bool sacudir = false;
+            Color colorFlash = fondoNormal;
+            Random rndShake = new Random();
+
+            timerFx.Tick += (s, e) =>
+            {
+                if (framesFx <= 0)
+                {
+                    timerFx.Stop();
+                    frmCombate.BackColor = fondoNormal;
+                    if (origenVentana != Point.Empty) frmCombate.Location = origenVentana;
+                    return;
+                }
+                framesFx--;
+                frmCombate.BackColor = (framesFx % 2 == 0) ? colorFlash : fondoNormal;
+                if (sacudir && origenVentana != Point.Empty)
+                {
+                    frmCombate.Location = new Point(
+                        origenVentana.X + rndShake.Next(-6, 7),
+                        origenVentana.Y + rndShake.Next(-4, 5));
+                }
+            };
+
+            void DispararFx(Color flash, bool conSacudida)
+            {
+                if (framesFx <= 0) origenVentana = frmCombate.Location;
+                colorFlash = flash;
+                sacudir = conSacudida;
+                framesFx = 7;
+                timerFx.Start();
+            }
+
+            frmCombate.FormClosed += (s, e) =>
+            {
+                timerFx.Stop();
+                timerFx.Dispose();
+            };
 
             void RefrescarBarrasCombate()
             {
@@ -596,6 +1000,7 @@ namespace Interfaz
             {
                 bool turnoEnemigo = true;
                 string msj = "";
+                bool golpePesado = false;
 
                 if (cmd == "1")
                 {
@@ -610,6 +1015,7 @@ namespace Interfaz
                         cadete.Energia--;
                         int dmg = (int)(cadete.DañoBase * 2.5);
                         enemigo.Vida -= dmg;
+                        golpePesado = true;
                         msj = $"¡Golpe pesado y contundente causando {dmg} de daño!";
                     }
                     else msj = "Sin energía para ataque pesado. Pierdes el turno.";
@@ -635,20 +1041,19 @@ namespace Interfaz
                     else msj = "Sin energía suficiente para escapar.";
                 }
 
-                // ¿Murió el enemigo?
                 if (enemigo.Vida <= 0)
                 {
                     cadete.BolsaFragmentos++;
                     realidadAsignada.MapaLocal[enemY, enemX] = '·';
                     if (tipoObj == 0 && !objCompletado) progresoObj++;
                     RefrescarBarrasCombate();
+                    GenerarEfectoCelda(enemX, enemY, Color.SpringGreen, "+1 FRAG", 18);
                     AgregarLog($"¡{enemigo.Nombre} eliminado! Has ganado +1 Fragmento de Realidad.", Color.SpringGreen);
                     MessageBox.Show($"¡El {enemigo.Nombre} colapsa!\nHas ganado +1 Fragmento de Realidad.", "VICTORIA TÁCTICA", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     frmCombate.Close();
                     return;
                 }
 
-                // Turno del enemigo
                 if (turnoEnemigo)
                 {
                     int dmgRecibido = enemigo.DañoBase;
@@ -656,13 +1061,20 @@ namespace Interfaz
                     {
                         dmgRecibido /= 2;
                         msj += $"\nEl enemigo ataca, pero tu bloqueo reduce el impacto a {dmgRecibido} de daño.";
+                        DispararFx(Color.FromArgb(20, 65, 90), false);
                     }
                     else
                     {
                         msj += $"\nEl enemigo te golpea causando {dmgRecibido} de daño.";
+                        DispararFx(golpePesado ? Color.FromArgb(20, 95, 55) : Color.FromArgb(110, 22, 30), true);
                     }
                     cadete.Vida -= dmgRecibido;
                 }
+                else if (golpePesado)
+                {
+                    DispararFx(Color.FromArgb(20, 100, 60), true);
+                }
+
                 bloqueoActivo = false;
                 rtbCombate.Text = msj;
                 RefrescarBarrasCombate();
@@ -689,7 +1101,7 @@ namespace Interfaz
         }
 
         // =====================================================================
-        // 5. MODAL DE INVENTARIO, CRAFTEO Y SELLADO DE ANOMALÍAS (CORREGIDO)
+        // 5. MODAL DE INVENTARIO, CRAFTEO Y SELLADO DE ANOMALÍAS
         // =====================================================================
         private void AbrirModalInventario(bool sobreAnomalia)
         {
@@ -729,12 +1141,12 @@ namespace Interfaz
 
             bool hayAnomaliaActiva = sobreAnomalia || (enExpedicion && realidadAsignada.MapaLocal[py, px] == '಄');
 
-            Button btnUsarAnomalia = CrearBotonEstilizado(
+            Button btnUsarAnomalia = CrearBotonInteractivo(
                 hayAnomaliaActiva ? "USAR EN ANOMALÍA (-2 E)" : "USAR (Solo en Anomalía ಄)",
                 new Rectangle(355, 218, 235, 52),
                 Color.FromArgb(140, 40, 160));
 
-            Button btnDescartar = CrearBotonEstilizado("DESCARTAR", new Rectangle(600, 218, 125, 52), Color.FromArgb(160, 45, 45));
+            Button btnDescartar = CrearBotonInteractivo("DESCARTAR", new Rectangle(600, 218, 125, 52), Color.FromArgb(160, 45, 45));
 
             Label lblPistasTitulo = new Label { Text = "=== OBSERVACIONES (PISTAS DE LA REALIDAD ACTUAL) ===", Bounds = new Rectangle(20, 282, 700, 22), ForeColor = Color.Gold };
             ListBox lstPistas = new ListBox
@@ -745,12 +1157,11 @@ namespace Interfaz
                 BorderStyle = BorderStyle.FixedSingle
             };
 
-            Button btnCraftPista = CrearBotonEstilizado("Craftear Pista (Coste: 3 Fragmentos)", new Rectangle(20, 408, 340, 42), Color.FromArgb(0, 120, 150));
-            Button btnCraftObjeto = CrearBotonEstilizado("Craftear Objeto (Coste: 3 Restos ▤)", new Rectangle(385, 408, 340, 42), Color.FromArgb(180, 110, 20));
+            Button btnCraftPista = CrearBotonInteractivo("Craftear Pista (Coste: 3 Fragmentos)", new Rectangle(20, 408, 340, 42), Color.FromArgb(0, 120, 150));
+            Button btnCraftObjeto = CrearBotonInteractivo("Craftear Objeto (Coste: 3 Restos ▤)", new Rectangle(385, 408, 340, 42), Color.FromArgb(180, 110, 20));
 
             bool actualizandoLista = false;
 
-            // Función 1: Solo actualiza el panel derecho según el ítem elegido (SIN borrar la lista)
             void ActualizarDetalleSeleccion()
             {
                 int idx = lstObjetos.SelectedIndex;
@@ -778,7 +1189,6 @@ namespace Interfaz
                 }
             }
 
-            // Función 2: Recarga las listas de ítems y pistas preservando el índice seleccionado
             void RecargarListasInventario(int indiceDeseado = 0)
             {
                 actualizandoLista = true;
@@ -786,9 +1196,7 @@ namespace Interfaz
 
                 lstObjetos.Items.Clear();
                 for (int i = 0; i < cadete.Inventario.Count; i++)
-                {
                     lstObjetos.Items.Add($"{i + 1}. {cadete.Inventario[i].Nombre} (Usos: {cadete.Inventario[i].Usos})");
-                }
 
                 lstPistas.Items.Clear();
                 if (cadete.Observaciones.Count == 0)
@@ -808,8 +1216,7 @@ namespace Interfaz
 
             lstObjetos.SelectedIndexChanged += (s, e) =>
             {
-                if (!actualizandoLista)
-                    ActualizarDetalleSeleccion();
+                if (!actualizandoLista) ActualizarDetalleSeleccion();
             };
 
             btnCraftPista.Click += (s, e) =>
@@ -896,12 +1303,14 @@ namespace Interfaz
                 {
                     realidadAsignada.Estabilidad += 30;
                     realidadAsignada.MapaLocal[py, px] = '·';
+                    GenerarEfectoCelda(px, py, Color.Magenta, "+30% EST", 20);
                     AgregarLog($"[ÉXITO]: '{objUsado.Nombre}' resonó con la anomalía. Fisura sellada (+30% Estabilidad).", Color.SpringGreen);
                     MessageBox.Show($"[ÉXITO]: La frecuencia de '{objUsado.Nombre}' resuena perfectamente.\nLa fisura cuántica se cierra (+30% Estabilidad).", "FISURA SELLADA", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
                     realidadAsignada.Estabilidad -= 15;
+                    GenerarEfectoCelda(px, py, Color.Red, "-15% EST", 14);
                     AgregarLog($"[INEFICAZ]: '{objUsado.Nombre}' no corresponde a esta anomalía (-15% Estabilidad).", Color.Red);
                     MessageBox.Show($"[INEFICAZ]: ¡Error! Tu interferencia con '{objUsado.Nombre}' empeoró la situación (-15% Estabilidad).", "INTERFERENCIA FALLIDA", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
@@ -931,11 +1340,10 @@ namespace Interfaz
         }
 
         // =====================================================================
-        // 6. MODAL DE SOPORTE VITAL (MINIJUEGOS DE RECARGA DE ENERGÍA)
+        // 6. MODAL DIDÁCTICO DE SOPORTE VITAL — FILTRO DE SEGURIDAD C#
         // =====================================================================
         private void AbrirModalSoporteVital(bool desdeCasillaMapa)
         {
-            // Solo se permite desde el campamento (!enExpedicion) o automáticamente al pisar 'Φ'
             if (!desdeCasillaMapa && enExpedicion) return;
 
             if (!desdeCasillaMapa && cadete.Energia >= cadete.EnergiaMax)
@@ -944,115 +1352,215 @@ namespace Interfaz
                 return;
             }
 
-            Random rnd = new Random();
-            int tipoJuego = rnd.Next(1, 5);
-            string tituloPrueba = "";
-            string pregunta = "";
-            string respuestaCorrecta = "";
+            PreguntaCSharp preg = bancoPreguntas.ObtenerSiguientePregunta();
+            bool tieneCodigo = !string.IsNullOrWhiteSpace(preg.CodigoEjemplo);
+            bool respondida = false;
+            int segundosRestantes = 25;
 
-            if (tipoJuego == 1)
+            using Form frmTrivia = new Form
             {
-                string[] preLore = { "Soy la IA que desertó. ¿Cuál es mi nombre?", "Mi flujo retrocede, marchito lo que nace. ¿Qué anomalía soy?", "Protocolo: Introduce el nombre registrado de tu perfil." };
-                string[] resLore = { "iris", "tiempo", cadete.Nombre.ToLower() };
-                int iL = rnd.Next(preLore.Length);
-                tituloPrueba = "PRUEBA DE CORDURA";
-                pregunta = preLore[iL];
-                respuestaCorrecta = resLore[iL];
-            }
-            else if (tipoJuego == 2)
-            {
-                tituloPrueba = "CALIBRACIÓN MATEMÁTICA";
-                pregunta = "Completa la secuencia cuántica:\n2  -  4  -  8  -  16  -  ?";
-                respuestaCorrecta = "32";
-            }
-            else if (tipoJuego == 3)
-            {
-                tituloPrueba = "FILTRO ANTIVIRUS (MEMORIZACIÓN)";
-                pregunta = "MEMORIZA EL CÓDIGO EN 3 SEGUNDOS:\n>>>  N-3-X-U-5  <<<";
-                respuestaCorrecta = "n-3-x-u-5";
-            }
-            else
-            {
-                tituloPrueba = "SINCRONIZACIÓN DE DATOS";
-                pregunta = "Ordena el anagrama del sistema:\nA  O  L  N  A  I  A  M";
-                respuestaCorrecta = "anomalia";
-            }
-
-            using Form frmMJ = new Form
-            {
-                Text = $"SOPORTE VITAL // {tituloPrueba}",
-                Size = new Size(500, 280),
+                Text = "SOPORTE VITAL // FILTRO DE SEGURIDAD C#",
+                Size = new Size(680, tieneCodigo ? 610 : 525),
                 StartPosition = FormStartPosition.CenterParent,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
                 MinimizeBox = false,
-                BackColor = Color.FromArgb(18, 22, 32),
+                ControlBox = false,
+                BackColor = Color.FromArgb(14, 18, 28),
                 ForeColor = Color.White,
-                Font = new Font("Consolas", 10.5F)
+                Font = new Font("Consolas", 10F)
             };
 
-            Label lblPreg = new Label
+            Label lblMeta = new Label
             {
-                Text = pregunta,
-                ForeColor = Color.Gold,
-                Bounds = new Rectangle(25, 25, 435, 75),
-                TextAlign = ContentAlignment.MiddleCenter
+                Text = $"CATEGORÍA: {preg.Categoria.ToUpper()}  |  DIFICULTAD: {preg.Dificultad.ToUpper()}",
+                Bounds = new Rectangle(22, 14, 460, 24),
+                ForeColor = Color.Cyan,
+                Font = new Font("Consolas", 9.5F, FontStyle.Bold)
             };
 
-            TextBox txtResp = new TextBox
+            Label lblTiempo = new Label
             {
-                Bounds = new Rectangle(80, 115, 320, 30),
-                BackColor = Color.FromArgb(28, 34, 48),
+                Text = "TIEMPO: 25s",
+                Bounds = new Rectangle(500, 14, 145, 24),
                 ForeColor = Color.SpringGreen,
-                TextAlign = HorizontalAlignment.Center
+                TextAlign = ContentAlignment.MiddleRight,
+                Font = new Font("Consolas", 10.5F, FontStyle.Bold)
             };
 
-            Button btnEnviar = CrearBotonEstilizado("VERIFICAR PROTOCOLO", new Rectangle(120, 165, 240, 45), Color.FromArgb(0, 140, 110));
-
-            if (tipoJuego == 3)
+            ProgressBar pbTiempo = new ProgressBar
             {
-                txtResp.Enabled = false;
-                btnEnviar.Enabled = false;
-                System.Windows.Forms.Timer tMem = new System.Windows.Forms.Timer { Interval = 2500 };
-                tMem.Tick += (s, e) =>
+                Bounds = new Rectangle(22, 42, 620, 12),
+                Maximum = 25,
+                Value = 25
+            };
+
+            Label lblEnunciado = new Label
+            {
+                Text = preg.Enunciado,
+                Bounds = new Rectangle(22, 66, 620, 52),
+                ForeColor = Color.Gold,
+                Font = new Font("Consolas", 10.5F, FontStyle.Bold)
+            };
+
+            int yActual = 122;
+            RichTextBox rtbCodigo = null;
+            if (tieneCodigo)
+            {
+                rtbCodigo = new RichTextBox
                 {
-                    tMem.Stop();
-                    lblPreg.Text = "[ CÓDIGO BORRADO DE PANTALLA ]\nIngresa la secuencia exacta:";
-                    txtResp.Enabled = true;
-                    btnEnviar.Enabled = true;
-                    txtResp.Focus();
+                    Bounds = new Rectangle(22, yActual, 620, 78),
+                    BackColor = Color.FromArgb(8, 11, 17),
+                    ForeColor = Color.FromArgb(140, 235, 255),
+                    Font = new Font("Consolas", 10F),
+                    ReadOnly = true,
+                    BorderStyle = BorderStyle.FixedSingle,
+                    Text = preg.CodigoEjemplo
                 };
-                tMem.Start();
+                yActual += 90;
             }
 
-            btnEnviar.Click += (s, e) =>
+            string[] letras = { "A", "B", "C", "D" };
+            Button[] botonesOpciones = new Button[4];
+
+            for (int i = 0; i < 4; i++)
             {
-                bool ganado = txtResp.Text.Trim().ToLower() == respuestaCorrecta;
-                if (ganado)
+                Button btnOpc = CrearBotonInteractivo(
+                    $"{letras[i]})  {preg.Opciones[i]}",
+                    new Rectangle(22, yActual + (i * 48), 620, 40),
+                    Color.FromArgb(30, 42, 66));
+                btnOpc.TextAlign = ContentAlignment.MiddleLeft;
+                btnOpc.Padding = new Padding(12, 0, 8, 0);
+                botonesOpciones[i] = btnOpc;
+            }
+
+            yActual += (4 * 48) + 8;
+
+            RichTextBox rtbExplicacion = new RichTextBox
+            {
+                Bounds = new Rectangle(22, yActual, 620, 92),
+                BackColor = Color.FromArgb(10, 14, 22),
+                ForeColor = Color.LightGray,
+                ReadOnly = true,
+                BorderStyle = BorderStyle.FixedSingle,
+                Text = "Selecciona la opción correcta antes de que se agote el tiempo para extraer +5 de Energía."
+            };
+
+            Button btnContinuar = CrearBotonInteractivo(
+                "CONTINUAR",
+                new Rectangle(220, yActual + 102, 225, 42),
+                Color.FromArgb(0, 145, 115));
+            ConfigurarEstadoBoton(btnContinuar, false, Color.FromArgb(0, 145, 115));
+
+            System.Windows.Forms.Timer timerTrivia = new System.Windows.Forms.Timer { Interval = 1000 };
+
+            void ResolverTrivia(int indiceElegido, bool porTiempoAgotado)
+            {
+                if (respondida) return;
+                respondida = true;
+                timerTrivia.Stop();
+
+                cadete.PreguntasCSharpRespondidas++;
+                bool acerto = !porTiempoAgotado && (indiceElegido == preg.IndiceCorrecto);
+
+                // Bloquear botones y resaltar respuesta correcta / incorrecta
+                for (int i = 0; i < 4; i++)
                 {
+                    botonesOpciones[i].Enabled = false;
+                    if (i == preg.IndiceCorrecto)
+                    {
+                        botonesOpciones[i].BackColor = Color.FromArgb(20, 150, 80);
+                        botonesOpciones[i].ForeColor = Color.White;
+                    }
+                    else if (i == indiceElegido && !acerto)
+                    {
+                        botonesOpciones[i].BackColor = Color.FromArgb(175, 40, 45);
+                        botonesOpciones[i].ForeColor = Color.White;
+                    }
+                    else
+                    {
+                        botonesOpciones[i].BackColor = Color.FromArgb(24, 28, 38);
+                        botonesOpciones[i].ForeColor = Color.FromArgb(115, 125, 140);
+                    }
+                }
+
+                string encabezadoResultado;
+                if (acerto)
+                {
+                    cadete.PreguntasCSharpAcertadas++;
                     cadete.Energia += 5;
-                    AgregarLog("[SOPORTE VITAL]: Autorización aceptada (+5 Energía recuperada).", Color.SpringGreen);
-                    MessageBox.Show("[AUTORIZACIÓN ACEPTADA]: +5 Energía recuperada.", "SOPORTE VITAL", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    encabezadoResultado = "[AUTORIZACIÓN ACEPTADA] ¡Respuesta correcta! (+5 Energía recuperada).";
+                    rtbExplicacion.ForeColor = Color.SpringGreen;
+                    AgregarLog("[SOPORTE VITAL C#]: Respuesta correcta (+5 Energía recuperada).", Color.SpringGreen);
+                    if (desdeCasillaMapa) GenerarEfectoCelda(px, py, Color.SpringGreen, "+5 E", 16);
                 }
                 else if (realidadAsignada.Estabilidad > 50)
                 {
                     cadete.Energia += 1;
-                    AgregarLog("[SOPORTE VITAL]: Fallo de filtro. Extracción mínima (+1 Energía).", Color.Gold);
-                    MessageBox.Show("[DENEGADO]: El sistema apenas extrajo (+1 Energía).\nLa realidad resistió el impacto.", "SOPORTE VITAL", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    encabezadoResultado = porTiempoAgotado
+                        ? "[TIEMPO AGOTADO] Extracción mínima (+1 Energía). La realidad resistió el impacto."
+                        : "[DENEGADO] Respuesta incorrecta. Extracción mínima (+1 Energía).";
+                    rtbExplicacion.ForeColor = Color.Gold;
+                    AgregarLog("[SOPORTE VITAL C#]: Fallo de filtro. Extracción mínima (+1 Energía).", Color.Gold);
+                    if (desdeCasillaMapa) GenerarEfectoCelda(px, py, Color.Gold, "+1 E", 10);
                 }
                 else
                 {
                     cadete.Energia += 1;
                     realidadAsignada.Estabilidad -= 15;
-                    AgregarLog("[CRÍTICO]: Falla en soporte vital drenó la estabilidad (-15% Estabilidad, +1 Energía).", Color.Red);
-                    MessageBox.Show("Falla grave. La anomalía drenó la estabilidad del sector (-15% Estabilidad).", "CRÍTICO", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    encabezadoResultado = porTiempoAgotado
+                        ? "[CRÍTICO - TIEMPO AGOTADO] Falla grave: -15% Estabilidad (+1 Energía)."
+                        : "[CRÍTICO] Falla grave en sector inestable: -15% Estabilidad (+1 Energía).";
+                    rtbExplicacion.ForeColor = Color.LightCoral;
+                    AgregarLog("[CRÍTICO C#]: Falla en soporte vital drenó la estabilidad (-15% Estabilidad, +1 Energía).", Color.Red);
+                    if (desdeCasillaMapa) GenerarEfectoCelda(px, py, Color.Red, "-15% EST", 14);
                 }
-                frmMJ.Close();
+
+                rtbExplicacion.Text = $"{encabezadoResultado}\n\nEXPLICACIÓN DIDÁCTICA:\n{preg.Explicacion}";
+                ConfigurarEstadoBoton(btnContinuar, true, Color.FromArgb(0, 145, 115));
+                frmTrivia.AcceptButton = btnContinuar;
+                btnContinuar.Focus();
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                int opcionIdx = i;
+                botonesOpciones[i].Click += (s, e) => ResolverTrivia(opcionIdx, false);
+            }
+
+            timerTrivia.Tick += (s, e) =>
+            {
+                segundosRestantes--;
+                pbTiempo.Value = Math.Max(0, segundosRestantes);
+                lblTiempo.Text = $"TIEMPO: {segundosRestantes:D2}s";
+
+                if (segundosRestantes <= 5) lblTiempo.ForeColor = Color.Red;
+                else if (segundosRestantes <= 10) lblTiempo.ForeColor = Color.Gold;
+
+                if (segundosRestantes <= 0)
+                    ResolverTrivia(-1, true);
             };
 
-            frmMJ.AcceptButton = btnEnviar;
-            frmMJ.Controls.AddRange(new Control[] { lblPreg, txtResp, btnEnviar });
-            frmMJ.ShowDialog(this);
+            btnContinuar.Click += (s, e) => frmTrivia.Close();
+
+            frmTrivia.FormClosed += (s, e) =>
+            {
+                timerTrivia.Stop();
+                timerTrivia.Dispose();
+            };
+
+            frmTrivia.Controls.Add(lblMeta);
+            frmTrivia.Controls.Add(lblTiempo);
+            frmTrivia.Controls.Add(pbTiempo);
+            frmTrivia.Controls.Add(lblEnunciado);
+            if (rtbCodigo != null) frmTrivia.Controls.Add(rtbCodigo);
+            frmTrivia.Controls.AddRange(botonesOpciones);
+            frmTrivia.Controls.Add(rtbExplicacion);
+            frmTrivia.Controls.Add(btnContinuar);
+
+            timerTrivia.Start();
+            frmTrivia.ShowDialog(this);
+
             VerificarTurnoIris();
             ActualizarHUD();
             GuardarJuego();
@@ -1086,9 +1594,9 @@ namespace Interfaz
                 Font = new Font("Consolas", 12F, FontStyle.Bold)
             };
 
-            Button btnUpInv = CrearBotonEstilizado("", new Rectangle(25, 65, 555, 55), Color.FromArgb(50, 80, 130));
-            Button btnUpVida = CrearBotonEstilizado("", new Rectangle(25, 135, 555, 55), Color.FromArgb(130, 45, 70));
-            Button btnUpEne = CrearBotonEstilizado("", new Rectangle(25, 205, 555, 55), Color.FromArgb(30, 120, 100));
+            Button btnUpInv = CrearBotonInteractivo("", new Rectangle(25, 65, 555, 55), Color.FromArgb(50, 80, 130));
+            Button btnUpVida = CrearBotonInteractivo("", new Rectangle(25, 135, 555, 55), Color.FromArgb(130, 45, 70));
+            Button btnUpEne = CrearBotonInteractivo("", new Rectangle(25, 205, 555, 55), Color.FromArgb(30, 120, 100));
 
             void ActualizarTextosTienda()
             {
@@ -1164,20 +1672,26 @@ namespace Interfaz
             if (enExpedicion) return;
 
             string eval = realidadAsignada.Estabilidad >= 80 ? "ESTABLE" : "INESTABLE";
+            double precisionCSharp = cadete.PreguntasCSharpRespondidas > 0
+                ? (cadete.PreguntasCSharpAcertadas * 100.0) / cadete.PreguntasCSharpRespondidas
+                : 0.0;
+
             string texto =
                 $"=== ESTADO DEL SISTEMA ===\n" +
                 $"• Explorador: {cadete.Nombre} ({cadete.Edad} años)\n" +
                 $"• Nivel del Cadete: {cadete.Nivel} (Experiencia: {cadete.Experiencia}/100)\n" +
-                $"• Evaluación de la realidad ({realidadAsignada.Nombre}): {eval} ({realidadAsignada.Estabilidad}%)\n\n" +
+                $"• Evaluación de la realidad ({realidadAsignada.Nombre}): {eval} ({realidadAsignada.Estabilidad}%)\n" +
+                $"• Precisión Módulo Didáctico C#: {cadete.PreguntasCSharpAcertadas}/{cadete.PreguntasCSharpRespondidas} ({precisionCSharp:F1}%)\n\n" +
                 $"=== BASE DE DATOS: MANUAL DE SUPERVIVENCIA 2.0 ===\n\n" +
                 $"1. SUPERVIVENCIA Y EXTRACCIÓN:\n" +
-                $"Cada 3 pasos consumes 1 de Energía. Si llega a cero, tu soporte vital colapsa. Recarga energía pisando los Núcleos (Φ) o desde el Campamento. Para congelar el mapa y habilitar las opciones del campamento, sitúate sobre el Ancla Base Permanente (☗) o un Campamento Temporal (☖) y presiona ESPACIO o 'Volver al campamento'.\n\n" +
+                $"Cada 3 pasos consumes 1 de Energía. Si llega a cero, tu soporte vital colapsa. Recarga energía superando trivias de C# al pisar Núcleos (Φ) o desde el Campamento. Para congelar el mapa, sitúate sobre la Base (☗) o un Campamento (☖) y presiona ESPACIO.\n\n" +
                 $"2. RECOLECCIÓN Y SÍNTESIS:\n" +
                 $"Encuentra Restos Tecnológicos (▤) y gasta 3 en el Inventario para ensamblar un Objeto. Elimina Enemigos (Ж) para obtener Fragmentos y gasta 3 para decodificar una Pista Sensorial.\n\n" +
                 $"3. COMBATE TÁCTICO:\n" +
                 $"Usa Ataques Ligeros (0 E), Golpes Pesados (1 E), Bloquear (reduce daño a la mitad) o Escapar (1 E).\n\n" +
                 $"4. SELLANDO LA ANOMALÍA:\n" +
-                $"Pisa las Fisuras Cuánticas (಄) y usa el Objeto que contrarreste la anomalía de esta realidad (Tiempo, Espacio, Mente o Silencio). Si aciertas, la Estabilidad sube +30%. Al llegar a 100%, puedes Extraer el universo entero (+100 EXP).";
+                $"Pisa las Fisuras Cuánticas (಄) y usa el Objeto que contrarreste la anomalía de esta realidad (Tiempo, Espacio, Mente o Silencio). Si aciertas, la Estabilidad sube +30%. Al llegar a 100%, puedes Extraer el universo entero (+100 EXP).\n\n" +
+                $"NEXUS v1.0 — Desarrollado por Sebastián Zubieta Quiroga";
 
             MessageBox.Show(texto, "ESTADO Y MANUAL DEL SIMULADOR 2.0", MessageBoxButtons.OK, MessageBoxIcon.Information);
             this.Focus();
@@ -1258,7 +1772,7 @@ namespace Interfaz
             NumericUpDown numCol = new NumericUpDown { Bounds = new Rectangle(310, 525, 70, 28), Minimum = 0, Maximum = AtlasRealidades.ancho - 1, BackColor = Color.FromArgb(25, 30, 40), ForeColor = Color.Cyan };
             Label lF = new Label { Text = "Fila (0-17):", Bounds = new Rectangle(40, 528, 105, 24) };
             Label lC = new Label { Text = "Columna (0-11):", Bounds = new Rectangle(225, 528, 85, 24) };
-            Button btnEscanear = CrearBotonEstilizado("ESCANEAR SECTOR", new Rectangle(400, 520, 245, 36), Color.FromArgb(0, 130, 160));
+            Button btnEscanear = CrearBotonInteractivo("ESCANEAR SECTOR", new Rectangle(400, 520, 245, 36), Color.FromArgb(0, 130, 160));
 
             btnEscanear.Click += (s, e) =>
             {
@@ -1296,6 +1810,8 @@ namespace Interfaz
             realidadAsignada = new Realidad();
             px = realidadAsignada.CadeteStartX;
             py = realidadAsignada.CadeteStartY;
+            visualPx = px;
+            visualPy = py;
             enExpedicion = false;
 
             ActualizarHUD();
@@ -1353,7 +1869,7 @@ namespace Interfaz
                 cadete.Energia = 0;
                 realidadAsignada.Estabilidad += 15;
                 irisActual.Repeler();
-                enExpedicion = false; // Devuelve al campamento al agotar energía
+                enExpedicion = false;
                 AgregarLog($"[NEXUS]: Purga de emergencia exitosa. {irisActual.NombreFragmento} repelido (+15% Estabilidad, Energía en 0).", Color.SpringGreen);
                 ActualizarHUD();
                 canvasMapa.Invalidate();
@@ -1380,12 +1896,15 @@ namespace Interfaz
             if (habilitado)
             {
                 btn.BackColor = colorActivo;
+                coloresBaseBotones[btn] = colorActivo;
                 btn.ForeColor = Color.White;
                 btn.FlatAppearance.BorderColor = Color.FromArgb(100, 220, 255);
             }
             else
             {
-                btn.BackColor = Color.FromArgb(28, 32, 42);
+                Color colorInactivo = Color.FromArgb(28, 32, 42);
+                btn.BackColor = colorInactivo;
+                coloresBaseBotones[btn] = colorInactivo;
                 btn.ForeColor = Color.FromArgb(100, 110, 125);
                 btn.FlatAppearance.BorderColor = Color.FromArgb(50, 58, 72);
             }
@@ -1431,14 +1950,11 @@ namespace Interfaz
                                           (irisActual.EstadoActual == EstadoIris.Acechando ? Color.Gold : Color.Red);
             }
 
-            // --- RESTRICCIÓN DE BOTONES SEGÚN EL CONTEXTO ---
             char tileActual = realidadAsignada.MapaLocal[py, px];
             bool sobreCampamentoOBase = enExpedicion && (tileActual == '☗' || tileActual == '☖');
 
-            // 1. "Volver al campamento": Verde brillante y solo habilitado al estar sobre ☗ o ☖ durante la exploración
             ConfigurarEstadoBoton(btnExtraerSector, sobreCampamentoOBase, Color.FromArgb(0, 185, 85));
 
-            // 2. Opciones de Campamento: Solo habilitadas cuando el mapa está congelado (!enExpedicion)
             bool enCampamento = !enExpedicion;
             ConfigurarEstadoBoton(btnNuevaIncursion, enCampamento, Color.FromArgb(0, 120, 160));
             ConfigurarEstadoBoton(btnInventario, enCampamento, Color.FromArgb(60, 70, 110));
@@ -1462,7 +1978,7 @@ namespace Interfaz
     }
 
     // =========================================================================
-    // CLASES DE DOMINIO Y LÓGICA DE NEGOCIO (PRESERVADAS DEL PROYECTO H3)
+    // CLASES DE DOMINIO Y LÓGICA DE NEGOCIO (PRESERVADAS + ESTADÍSTICAS C#)
     // =========================================================================
     public enum Anomalia
     {
@@ -1529,6 +2045,10 @@ namespace Interfaz
         public int UpgradesVida { get; set; }
         public int UpgradesEnergia { get; set; }
 
+        // Estadísticas del módulo didáctico C# (compatibles con JSON antiguos)
+        public int PreguntasCSharpRespondidas { get; set; } = 0;
+        public int PreguntasCSharpAcertadas { get; set; } = 0;
+
         public Usuario()
         {
             Inventario = new List<Objeto>();
@@ -1555,6 +2075,8 @@ namespace Interfaz
             UpgradesInv = 0;
             UpgradesVida = 0;
             UpgradesEnergia = 0;
+            PreguntasCSharpRespondidas = 0;
+            PreguntasCSharpAcertadas = 0;
         }
 
         public bool RecogerObjeto(Objeto nuevoObjeto)
