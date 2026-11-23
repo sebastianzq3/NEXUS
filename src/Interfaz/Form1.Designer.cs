@@ -2,6 +2,8 @@
 using System.Drawing;
 using System.Windows.Forms;
 
+// no se encontraron entradas inválidas
+
 namespace Interfaz
 {
     partial class Form1
