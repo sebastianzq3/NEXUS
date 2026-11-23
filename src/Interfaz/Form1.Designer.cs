@@ -24,6 +24,16 @@ namespace Interfaz
         private Button btnCrearPerfil;
         private Button btnPurgarPerfil;
 
+        // Persistencia Dual (JSON / SQL Server)
+        private GroupBox grpPersistencia;
+        private RadioButton rbPersistenciaJson;
+        private RadioButton rbPersistenciaSql;
+        private Label lblEstadoSql;
+        private Label lblDetalleMotor;
+        private Button btnProbarSql;
+        private Button btnConfigSql;
+        private Button btnMigrarJsonASql;
+
         // Controles de Pantalla 2: HUD Superior
         private Panel pnlHud;
         private Label lblExploradorInfo;
@@ -91,26 +101,26 @@ namespace Interfaz
             this.lblTituloNexus = new Label
             {
                 Text = "╔═══ N E X U S   T R A I N I N G   S Y S T E M ═══╗",
-                Font = new Font("Consolas", 20F, FontStyle.Bold),
+                Font = new Font("Consolas", 18F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 255, 255),
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Bounds = new Rectangle(100, 35, 1020, 45)
+                Bounds = new Rectangle(100, 118, 1020, 34)
             };
 
             this.lblSubtituloNexus = new Label
             {
-                Text = "SISTEMA DE ANCLAJE MULTIVERSAL // GESTIÓN BIOMÉTRICA DE EXPLORADORES",
-                Font = new Font("Consolas", 11F, FontStyle.Bold),
+                Text = "SISTEMA DE ANCLAJE MULTIVERSAL // GESTIÓN BIOMÉTRICA Y PERSISTENCIA DUAL",
+                Font = new Font("Consolas", 10F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(180, 100, 255),
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Bounds = new Rectangle(100, 85, 1020, 30)
+                Bounds = new Rectangle(100, 152, 1020, 22)
             };
 
             this.dgvPerfiles = new DataGridView
             {
-                Bounds = new Rectangle(160, 135, 900, 340),
+                Bounds = new Rectangle(160, 178, 900, 260),
                 BackgroundColor = Color.FromArgb(22, 26, 35),
                 ForeColor = Color.FromArgb(0, 255, 140),
                 GridColor = Color.FromArgb(0, 140, 160),
@@ -136,22 +146,22 @@ namespace Interfaz
             {
                 Text = " [ REGISTRAR NUEVO EXPLORADOR ] ",
                 ForeColor = Color.Cyan,
-                Bounds = new Rectangle(160, 495, 540, 110)
+                Bounds = new Rectangle(160, 444, 540, 95)
             };
 
-            Label lblNom = new Label { Text = "Designación (Nombre):", Bounds = new Rectangle(20, 32, 180, 25), ForeColor = Color.White };
+            Label lblNom = new Label { Text = "Designación (Nombre):", Bounds = new Rectangle(18, 26, 175, 22), ForeColor = Color.White };
             this.txtNuevoNombre = new TextBox
             {
-                Bounds = new Rectangle(205, 29, 175, 28),
+                Bounds = new Rectangle(195, 23, 180, 26),
                 BackColor = Color.FromArgb(30, 35, 45),
                 ForeColor = Color.SpringGreen,
                 BorderStyle = BorderStyle.FixedSingle
             };
 
-            Label lblEd = new Label { Text = "Edad (Mín. 18):", Bounds = new Rectangle(20, 68, 180, 25), ForeColor = Color.White };
+            Label lblEd = new Label { Text = "Edad (Mín. 18):", Bounds = new Rectangle(18, 58, 175, 22), ForeColor = Color.White };
             this.numNuevaEdad = new NumericUpDown
             {
-                Bounds = new Rectangle(205, 65, 90, 28),
+                Bounds = new Rectangle(195, 55, 85, 26),
                 Minimum = 18,
                 Maximum = 120,
                 Value = 20,
@@ -159,16 +169,76 @@ namespace Interfaz
                 ForeColor = Color.SpringGreen
             };
 
-            this.btnCrearPerfil = CrearBotonEstilizado("REGISTRAR Y ENTRAR", new Rectangle(395, 28, 130, 65), Color.FromArgb(0, 180, 100));
+            this.btnCrearPerfil = CrearBotonEstilizado("REGISTRAR Y ENTRAR", new Rectangle(388, 22, 138, 60), Color.FromArgb(0, 180, 100));
             grpNuevo.Controls.AddRange(new Control[] { lblNom, this.txtNuevoNombre, lblEd, this.numNuevaEdad, this.btnCrearPerfil });
 
-            this.btnCargarPerfil = CrearBotonEstilizado("► CARGAR PERFIL SELECCIONADO", new Rectangle(720, 503, 340, 48), Color.FromArgb(0, 150, 190));
-            this.btnPurgarPerfil = CrearBotonEstilizado("✖ PURGAR REGISTRO (BORRAR)", new Rectangle(720, 557, 340, 48), Color.FromArgb(180, 40, 50));
+            this.btnCargarPerfil = CrearBotonEstilizado("► CARGAR PERFIL SELECCIONADO", new Rectangle(715, 448, 345, 42), Color.FromArgb(0, 150, 190));
+            this.btnPurgarPerfil = CrearBotonEstilizado("✖ PURGAR REGISTRO (BORRAR)", new Rectangle(715, 497, 345, 42), Color.FromArgb(180, 40, 50));
+
+            // Grupo de Persistencia Dual (JSON / SQL Server)
+            this.grpPersistencia = new GroupBox
+            {
+                Text = " [ ARQUITECTURA DE PERSISTENCIA Y MEMORIA RELACIONAL ] ",
+                ForeColor = Color.FromArgb(0, 229, 255),
+                Font = new Font("Consolas", 9.5F, FontStyle.Bold),
+                Bounds = new Rectangle(160, 546, 900, 150)
+            };
+
+            this.rbPersistenciaJson = new RadioButton
+            {
+                Text = "📁 Archivo Plano JSON (%LocalAppData%)",
+                Bounds = new Rectangle(20, 24, 270, 25),
+                ForeColor = Color.White,
+                Font = new Font("Consolas", 9.5F, FontStyle.Regular),
+                Checked = true
+            };
+
+            this.rbPersistenciaSql = new RadioButton
+            {
+                Text = "🗄️ SQL Server Relacional (NexusDB)",
+                Bounds = new Rectangle(295, 24, 280, 25),
+                ForeColor = Color.FromArgb(0, 255, 140),
+                Font = new Font("Consolas", 9.5F, FontStyle.Bold)
+            };
+
+            this.btnProbarSql = CrearBotonEstilizado("⚡ PROBAR CONEXIÓN", new Rectangle(585, 20, 150, 30), Color.FromArgb(40, 110, 180));
+            this.btnProbarSql.Font = new Font("Consolas", 8.5F, FontStyle.Bold);
+
+            this.btnConfigSql = CrearBotonEstilizado("⚙️ CONFIGURAR CADENA", new Rectangle(740, 20, 145, 30), Color.FromArgb(80, 70, 140));
+            this.btnConfigSql.Font = new Font("Consolas", 8.5F, FontStyle.Bold);
+
+            this.lblEstadoSql = new Label
+            {
+                Text = "ESTADO: Modo JSON Activo | Listo para conmutar a Microsoft SQL Server",
+                Bounds = new Rectangle(20, 54, 555, 24),
+                Font = new Font("Consolas", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 255, 200)
+            };
+
+            this.btnMigrarJsonASql = CrearBotonEstilizado("🔄 MIGRAR PARTIDAS JSON A SQL SERVER", new Rectangle(585, 54, 300, 30), Color.FromArgb(0, 140, 110));
+            this.btnMigrarJsonASql.Font = new Font("Consolas", 8.5F, FontStyle.Bold);
+
+            this.lblDetalleMotor = new Label
+            {
+                Text = "Conexión objetivo: .\\SQLEXPRESS | Base: NexusDB (6 tablas 3FN, transacciones ACID, ADO.NET puro)\nPara inicializar la BD relacional: powershell -ExecutionPolicy Bypass -File .\\database\\ejecutar_scripts.ps1",
+                Bounds = new Rectangle(20, 84, 860, 55),
+                Font = new Font("Consolas", 8.2F, FontStyle.Regular),
+                ForeColor = Color.FromArgb(140, 165, 195)
+            };
+
+            this.grpPersistencia.Controls.AddRange(new Control[]
+            {
+                this.rbPersistenciaJson, this.rbPersistenciaSql,
+                this.btnProbarSql, this.btnConfigSql,
+                this.lblEstadoSql, this.btnMigrarJsonASql,
+                this.lblDetalleMotor
+            });
 
             this.pnlPerfiles.Controls.AddRange(new Control[]
             {
                 this.lblTituloNexus, this.lblSubtituloNexus, this.dgvPerfiles,
-                grpNuevo, this.btnCargarPerfil, this.btnPurgarPerfil
+                grpNuevo, this.btnCargarPerfil, this.btnPurgarPerfil,
+                this.grpPersistencia
             });
 
             // =========================================================

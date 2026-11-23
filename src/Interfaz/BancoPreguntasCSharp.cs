@@ -27,6 +27,16 @@ namespace Interfaz
             RellenarYBarajarCola();
         }
 
+        public void CargarPreguntasDesdeLista(List<PreguntaCSharp> nuevas)
+        {
+            if (nuevas != null && nuevas.Count > 0)
+            {
+                todasLasPreguntas.Clear();
+                todasLasPreguntas.AddRange(nuevas);
+                RellenarYBarajarCola();
+            }
+        }
+
         public PreguntaCSharp ObtenerSiguientePregunta()
         {
             if (colaBarajada.Count == 0)

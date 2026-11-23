@@ -19,6 +19,16 @@ namespace Interfaz
 
         private List<(string Ruta, DatosPartida Datos)> perfilesCargados = new List<(string, DatosPartida)>();
 
+        // Alternativa de Persistencia: JSON Local o SQL Server Relacional
+        public enum ModoPersistencia
+        {
+            JsonLocal,
+            SqlServer
+        }
+
+        private ModoPersistencia modoActualPersistencia = ModoPersistencia.JsonLocal;
+        private string cadenaConexionSql = NexusSqlService.ObtenerCadenaConexion();
+
         private Usuario cadete = null;
         private Realidad realidadAsignada = null;
         private string rutaGuardadoActual = "";
@@ -270,10 +280,24 @@ namespace Interfaz
 
         private void ConfigurarEventos()
         {
-            // Eventos de Perfiles
+            // Eventos de Perfiles y Persistencia Dual
             this.btnCargarPerfil.Click += BtnCargarPerfil_Click;
             this.btnCrearPerfil.Click += BtnCrearPerfil_Click;
             this.btnPurgarPerfil.Click += BtnPurgarPerfil_Click;
+
+            this.rbPersistenciaJson.CheckedChanged += (s, e) =>
+            {
+                if (this.rbPersistenciaJson.Checked)
+                    CambiarModoPersistencia(ModoPersistencia.JsonLocal);
+            };
+            this.rbPersistenciaSql.CheckedChanged += (s, e) =>
+            {
+                if (this.rbPersistenciaSql.Checked)
+                    CambiarModoPersistencia(ModoPersistencia.SqlServer);
+            };
+            this.btnProbarSql.Click += BtnProbarSql_Click;
+            this.btnConfigSql.Click += BtnConfigSql_Click;
+            this.btnMigrarJsonASql.Click += BtnMigrarJsonASql_Click;
 
             // Eventos de Comandos del Panel Táctico
             this.btnExtraerSector.Click += (s, e) => IntentarVolverAlCampamento();
@@ -290,6 +314,7 @@ namespace Interfaz
             Button[] botonesPrincipales =
             {
                 btnCargarPerfil, btnCrearPerfil, btnPurgarPerfil,
+                btnProbarSql, btnConfigSql, btnMigrarJsonASql,
                 btnExtraerSector, btnNuevaIncursion, btnInventario, btnRecargarEnergia,
                 btnTienda, btnManualEstado, btnAtlas, btnExtraerRealidad, btnDesconectar
             };
@@ -399,23 +424,221 @@ namespace Interfaz
             }
         }
 
+        private void CambiarModoPersistencia(ModoPersistencia nuevoModo)
+        {
+            if (nuevoModo == ModoPersistencia.SqlServer)
+            {
+                bool ok = NexusSqlService.ProbarConexion(cadenaConexionSql, out string msg);
+                if (!ok)
+                {
+                    MessageBox.Show(
+                        $"No se pudo establecer conexión con Microsoft SQL Server.\n\nDetalle técnico:\n{msg}\n\n" +
+                        "Verifica que el servicio SQL Server esté activo o ejecuta el script 'database/ejecutar_scripts.ps1' para desplegar NexusDB.",
+                        "CONEXIÓN SQL SERVER",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning
+                    );
+                    rbPersistenciaJson.Checked = true;
+                    return;
+                }
+
+                modoActualPersistencia = ModoPersistencia.SqlServer;
+                lblEstadoSql.Text = "ESTADO: SQL Server Activo | Conectado a NexusDB (Persistencia Relacional ACID)";
+                lblEstadoSql.ForeColor = Color.SpringGreen;
+
+                // Cargar preguntas desde base de datos si están disponibles
+                try
+                {
+                    var preguntasSql = NexusSqlService.CargarPreguntasDesdeSql(cadenaConexionSql);
+                    if (preguntasSql.Count > 0)
+                        bancoPreguntas.CargarPreguntasDesdeLista(preguntasSql);
+                }
+                catch { }
+            }
+            else
+            {
+                modoActualPersistencia = ModoPersistencia.JsonLocal;
+                lblEstadoSql.Text = "ESTADO: Modo JSON Activo (%LocalAppData%\\NEXUS\\Saves)";
+                lblEstadoSql.ForeColor = Color.Cyan;
+            }
+
+            RefrescarTablaPerfiles();
+        }
+
+        private void BtnProbarSql_Click(object sender, EventArgs e)
+        {
+            Cursor = Cursors.WaitCursor;
+            try
+            {
+                bool ok = NexusSqlService.ProbarConexion(cadenaConexionSql, out string msg);
+                if (ok)
+                {
+                    MessageBox.Show(
+                        $"Conexión exitosa a Microsoft SQL Server.\n\nCadena: {cadenaConexionSql}\nRespuesta: {msg}",
+                        "VERIFICACIÓN DE CONEXIÓN SQL",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+                }
+                else
+                {
+                    MessageBox.Show(
+                        $"No se pudo conectar a SQL Server.\n\nDetalle:\n{msg}\n\nCadena actual: {cadenaConexionSql}",
+                        "ERROR DE CONEXIÓN SQL",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                }
+            }
+            finally
+            {
+                Cursor = Cursors.Default;
+            }
+        }
+
+        private void BtnConfigSql_Click(object sender, EventArgs e)
+        {
+            using Form frmConfig = new Form
+            {
+                Text = "CONFIGURACIÓN DE CONEXIÓN SQL SERVER",
+                Size = new Size(620, 240),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                BackColor = Color.FromArgb(20, 24, 32),
+                ForeColor = Color.White
+            };
+
+            Label lbl = new Label
+            {
+                Text = "Cadena de conexión ADO.NET para Microsoft SQL Server:",
+                Bounds = new Rectangle(20, 15, 560, 25),
+                ForeColor = Color.Cyan,
+                Font = new Font("Consolas", 9.5F, FontStyle.Bold)
+            };
+
+            TextBox txtCadena = new TextBox
+            {
+                Text = cadenaConexionSql,
+                Bounds = new Rectangle(20, 45, 560, 28),
+                BackColor = Color.FromArgb(30, 36, 48),
+                ForeColor = Color.SpringGreen,
+                Font = new Font("Consolas", 9.5F)
+            };
+
+            Button btnDefecto = new Button
+            {
+                Text = "RESTAURAR DEFECTO",
+                Bounds = new Rectangle(20, 95, 170, 35),
+                BackColor = Color.FromArgb(50, 60, 75),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnDefecto.Click += (s, ev) => txtCadena.Text = NexusSqlService.CadenaPorDefecto;
+
+            Button btnGuardar = new Button
+            {
+                Text = "GUARDAR Y APLICAR",
+                Bounds = new Rectangle(390, 95, 190, 35),
+                BackColor = Color.FromArgb(0, 160, 110),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnGuardar.Click += (s, ev) =>
+            {
+                if (string.IsNullOrWhiteSpace(txtCadena.Text))
+                {
+                    MessageBox.Show("La cadena de conexión no puede estar vacía.", "ADVERTENCIA", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                cadenaConexionSql = txtCadena.Text.Trim();
+                NexusSqlService.GuardarCadenaConexion(cadenaConexionSql);
+                lblDetalleMotor.Text = $"Conexión objetivo: {cadenaConexionSql}";
+                frmConfig.DialogResult = DialogResult.OK;
+                frmConfig.Close();
+            };
+
+            frmConfig.Controls.AddRange(new Control[] { lbl, txtCadena, btnDefecto, btnGuardar });
+            if (frmConfig.ShowDialog(this) == DialogResult.OK)
+            {
+                if (modoActualPersistencia == ModoPersistencia.SqlServer)
+                    RefrescarTablaPerfiles();
+            }
+        }
+
+        private void BtnMigrarJsonASql_Click(object sender, EventArgs e)
+        {
+            Cursor = Cursors.WaitCursor;
+            try
+            {
+                bool ok = NexusSqlService.ProbarConexion(cadenaConexionSql, out string msg);
+                if (!ok)
+                {
+                    MessageBox.Show($"No se puede migrar: SQL Server no está disponible.\nDetalle: {msg}", "ERROR SQL", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                string[] archivos = Directory.GetFiles(directorioSaves, "*.json");
+                if (archivos.Length == 0)
+                {
+                    MessageBox.Show("No se encontraron archivos JSON de guardado en el almacenamiento local.", "MIGRACIÓN", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                int migrados = 0;
+                int errores = 0;
+                foreach (string arch in archivos)
+                {
+                    try
+                    {
+                        string json = File.ReadAllText(arch);
+                        DatosPartida dp = JsonSerializer.Deserialize<DatosPartida>(json);
+                        if (dp != null && dp.Jugador != null && dp.RealidadActual != null)
+                        {
+                            dp.RealidadActual.InicializarMapaSiNoExiste();
+                            NexusSqlService.GuardarPartidaCompleta(cadenaConexionSql, dp.Jugador, dp.RealidadActual);
+                            migrados++;
+                        }
+                    }
+                    catch
+                    {
+                        errores++;
+                    }
+                }
+
+                MessageBox.Show(
+                    $"Migración completada exitosamente.\n\nPartidas importadas a SQL Server: {migrados}\nArchivos con errores u omitidos: {errores}\n\nPuedes alternar al 'Modo SQL Server' para continuar jugando con la BD relacional.",
+                    "SINCRONIZACIÓN MULTIVERSAL",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                if (modoActualPersistencia == ModoPersistencia.SqlServer)
+                    RefrescarTablaPerfiles();
+            }
+            finally
+            {
+                Cursor = Cursors.Default;
+            }
+        }
+
         private void RefrescarTablaPerfiles()
         {
             dgvPerfiles.Rows.Clear();
             perfilesCargados.Clear();
 
-            string[] archivos = Directory.GetFiles(directorioSaves, "*.json");
-            foreach (string archivo in archivos)
+            if (modoActualPersistencia == ModoPersistencia.SqlServer)
             {
                 try
                 {
-                    DatosPartida dp = JsonSerializer.Deserialize<DatosPartida>(File.ReadAllText(archivo));
-                    if (dp != null && dp.Jugador != null && dp.RealidadActual != null)
+                    var perfilesSql = NexusSqlService.ListarPerfiles(cadenaConexionSql);
+                    foreach (var (nombre, dp) in perfilesSql)
                     {
                         dp.RealidadActual.InicializarMapaSiNoExiste();
-                        perfilesCargados.Add((archivo, dp));
+                        perfilesCargados.Add(($"[SQL]:{nombre}", dp));
                         dgvPerfiles.Rows.Add(
-                            dp.Jugador.Nombre,
+                            dp.Jugador.Nombre + " [SQL]",
                             $"{dp.Jugador.Edad} años",
                             $"Nv. {dp.Jugador.Nivel} ({dp.Jugador.Experiencia}/100)",
                             $"{dp.Jugador.Vida}/{dp.Jugador.VidaMax}",
@@ -425,10 +648,39 @@ namespace Interfaz
                         );
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    perfilesCargados.Add((archivo, null));
-                    dgvPerfiles.Rows.Add($"[CORRUPTO: {Path.GetFileName(archivo)}]", "-", "-", "-", "-", "-", "-");
+                    dgvPerfiles.Rows.Add($"[ERROR SQL: {ex.Message}]", "-", "-", "-", "-", "-", "-");
+                }
+            }
+            else
+            {
+                string[] archivos = Directory.GetFiles(directorioSaves, "*.json");
+                foreach (string archivo in archivos)
+                {
+                    try
+                    {
+                        DatosPartida dp = JsonSerializer.Deserialize<DatosPartida>(File.ReadAllText(archivo));
+                        if (dp != null && dp.Jugador != null && dp.RealidadActual != null)
+                        {
+                            dp.RealidadActual.InicializarMapaSiNoExiste();
+                            perfilesCargados.Add((archivo, dp));
+                            dgvPerfiles.Rows.Add(
+                                dp.Jugador.Nombre,
+                                $"{dp.Jugador.Edad} años",
+                                $"Nv. {dp.Jugador.Nivel} ({dp.Jugador.Experiencia}/100)",
+                                $"{dp.Jugador.Vida}/{dp.Jugador.VidaMax}",
+                                $"{dp.Jugador.Energia}/{dp.Jugador.EnergiaMax}",
+                                dp.RealidadActual.Nombre,
+                                $"{dp.RealidadActual.Estabilidad}%"
+                            );
+                        }
+                    }
+                    catch
+                    {
+                        perfilesCargados.Add((archivo, null));
+                        dgvPerfiles.Rows.Add($"[CORRUPTO: {Path.GetFileName(archivo)}]", "-", "-", "-", "-", "-", "-");
+                    }
                 }
             }
         }
@@ -445,18 +697,46 @@ namespace Interfaz
             var seleccionado = perfilesCargados[idx];
             if (seleccionado.Datos == null)
             {
-                MessageBox.Show("El archivo seleccionado está dañado y no puede sincronizarse.", "ERROR DE DATOS", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("El registro seleccionado está dañado y no puede sincronizarse.", "ERROR DE DATOS", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            cadete = seleccionado.Datos.Jugador;
-            realidadAsignada = seleccionado.Datos.RealidadActual;
+            if (modoActualPersistencia == ModoPersistencia.SqlServer || (seleccionado.Ruta != null && seleccionado.Ruta.StartsWith("[SQL]:")))
+            {
+                try
+                {
+                    string nombreLimpio = seleccionado.Datos.Jugador.Nombre;
+                    DatosPartida dpCompleta = NexusSqlService.CargarPartidaCompleta(cadenaConexionSql, nombreLimpio);
+                    if (dpCompleta != null)
+                    {
+                        cadete = dpCompleta.Jugador;
+                        realidadAsignada = dpCompleta.RealidadActual;
+                    }
+                    else
+                    {
+                        cadete = seleccionado.Datos.Jugador;
+                        realidadAsignada = seleccionado.Datos.RealidadActual;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al recuperar estado desde SQL Server: {ex.Message}", "ERROR SQL", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+            else
+            {
+                cadete = seleccionado.Datos.Jugador;
+                realidadAsignada = seleccionado.Datos.RealidadActual;
+            }
+
             realidadAsignada.InicializarMapaSiNoExiste();
             if (!Realidad.ListaRealidades.Contains(realidadAsignada))
                 Realidad.ListaRealidades.Add(realidadAsignada);
 
             rutaGuardadoActual = seleccionado.Ruta;
-            EntrarAlSimulador($"[SISTEMA]: Perfil de {cadete.Nombre} recuperado exitosamente. Modo Campamento activo.");
+            string motorOrigen = (rutaGuardadoActual != null && rutaGuardadoActual.StartsWith("[SQL]:")) ? "SQL Server" : "JSON Local";
+            EntrarAlSimulador($"[SISTEMA]: Perfil de {cadete.Nombre} recuperado exitosamente vía {motorOrigen}. Modo Campamento activo.");
         }
 
         private void BtnCrearPerfil_Click(object sender, EventArgs e)
@@ -472,12 +752,28 @@ namespace Interfaz
             cadete = new Usuario(nombre, edad);
             realidadAsignada = new Realidad();
 
-            string nombreSeguro = string.Join("_", nombre.Split(Path.GetInvalidFileNameChars()));
-            rutaGuardadoActual = Path.Combine(directorioSaves, $"{nombreSeguro}.json");
+            if (modoActualPersistencia == ModoPersistencia.SqlServer)
+            {
+                rutaGuardadoActual = $"[SQL]:{nombre}";
+                try
+                {
+                    NexusSqlService.GuardarPartidaCompleta(cadenaConexionSql, cadete, realidadAsignada);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al registrar perfil en SQL Server: {ex.Message}", "ERROR SQL", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+            else
+            {
+                string nombreSeguro = string.Join("_", nombre.Split(Path.GetInvalidFileNameChars()));
+                rutaGuardadoActual = Path.Combine(directorioSaves, $"{nombreSeguro}.json");
+                GuardarJuego();
+            }
 
-            GuardarJuego();
             txtNuevoNombre.Clear();
-            EntrarAlSimulador($"[ACCESO CONCEDIDO]: Bienvenido, Explorador {cadete.Nombre} ({cadete.Edad} años). Anclaje establecido en {realidadAsignada.Nombre}.");
+            EntrarAlSimulador($"[ACCESO CONCEDIDO]: Bienvenido, Explorador {cadete.Nombre} ({cadete.Edad} años). Anclaje establecido en {realidadAsignada.Nombre} (Persistencia: {modoActualPersistencia}).");
         }
 
         private void BtnPurgarPerfil_Click(object sender, EventArgs e)
@@ -486,24 +782,58 @@ namespace Interfaz
 
             int idx = dgvPerfiles.SelectedRows[0].Index;
             string ruta = perfilesCargados[idx].Ruta;
+            string nombrePerfil = perfilesCargados[idx].Datos?.Jugador?.Nombre ?? Path.GetFileNameWithoutExtension(ruta);
 
-            if (MessageBox.Show($"¿Confirmas la purga definitiva del archivo '{Path.GetFileName(ruta)}' del multiverso?",
+            if (MessageBox.Show($"¿Confirmas la purga definitiva del registro de '{nombrePerfil}' del multiverso?",
                 "PURGA DE DATOS", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
-                File.Delete(ruta);
+                if (modoActualPersistencia == ModoPersistencia.SqlServer || (ruta != null && ruta.StartsWith("[SQL]:")))
+                {
+                    try
+                    {
+                        NexusSqlService.EliminarPerfil(cadenaConexionSql, nombrePerfil);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error al purgar registro de SQL Server: {ex.Message}", "ERROR SQL", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                }
+                else
+                {
+                    if (File.Exists(ruta))
+                        File.Delete(ruta);
+                }
+
                 RefrescarTablaPerfiles();
             }
         }
 
         private void GuardarJuego()
         {
-            if (cadete == null || realidadAsignada == null || string.IsNullOrEmpty(rutaGuardadoActual)) return;
-            if (!Directory.Exists(directorioSaves))
-                Directory.CreateDirectory(directorioSaves);
+            if (cadete == null || realidadAsignada == null) return;
 
-            DatosPartida datos = new DatosPartida { Jugador = cadete, RealidadActual = realidadAsignada };
-            var opciones = new JsonSerializerOptions { WriteIndented = true };
-            File.WriteAllText(rutaGuardadoActual, JsonSerializer.Serialize(datos, opciones));
+            if (modoActualPersistencia == ModoPersistencia.SqlServer || (rutaGuardadoActual != null && rutaGuardadoActual.StartsWith("[SQL]:")))
+            {
+                try
+                {
+                    NexusSqlService.GuardarPartidaCompleta(cadenaConexionSql, cadete, realidadAsignada);
+                }
+                catch (Exception ex)
+                {
+                    AgregarLog($"[ADVERTENCIA SQL]: Error al sincronizar memoria persistente: {ex.Message}", Color.Coral);
+                }
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(rutaGuardadoActual)) return;
+                if (!Directory.Exists(directorioSaves))
+                    Directory.CreateDirectory(directorioSaves);
+
+                DatosPartida datos = new DatosPartida { Jugador = cadete, RealidadActual = realidadAsignada };
+                var opciones = new JsonSerializerOptions { WriteIndented = true };
+                File.WriteAllText(rutaGuardadoActual, JsonSerializer.Serialize(datos, opciones));
+            }
         }
 
         private void EntrarAlSimulador(string mensajeInicial)

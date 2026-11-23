@@ -1,118 +1,169 @@
-# Arquitectura Actual del Sistema: NEXUS (v1.0.0 — Windows Forms)
+# Arquitectura Actual del Sistema: NEXUS (v1.1.0 — Hito 4: Persistencia Dual JSON + SQL Server)
 
 ## 1. Resumen Ejecutivo y Estado del Proyecto
-La versión **v1.0.0** de **NEXUS** es una aplicación de escritorio gráfica e instalable desarrollada en **C# (.NET 10) y Windows Forms** dentro del proyecto `src/Interfaz` (compilado con `<AssemblyName>NEXUS</AssemblyName>` para producir **`NEXUS.exe`**).
+La versión **v1.1.0** de **NEXUS** consolida la evolución del sistema hacia la **Operación Memoria (Hito 4 — UNIFRANZ)**, incorporando una **arquitectura de persistencia dual**:
+1. **Almacenamiento Local en JSON:** Modo autónomo basado en serialización `System.Text.Json` en `%LocalAppData%\NEXUS\Saves\*.json`, ideal para distribución ligera sin dependencias externas.
+2. **Almacenamiento Relacional en Microsoft SQL Server (`NexusDB`):** Alternativa transaccional en Tercera Forma Normal (3FN) desarrollada con **ADO.NET puro (`Microsoft.Data.SqlClient`)**, soportando transacciones ACID explícitas (`SqlTransaction`), consultas parametrizadas, eliminación en cascada y catálogo dinámico de trivias de C#.
 
-El sistema conserva la totalidad de las reglas de negocio del Hito 3 mientras consolida tres grandes pilares arquitectónicos:
-1. **Arquitectura Orientada a Eventos (*Event-Driven*) con Motor Animado GDI+:** Renderizado en `BufferedCanvas` a ~30 FPS mediante temporizadores desacoplados (`timerAnimacion` y `timerIris`).
-2. **Módulo Educativo Desacoplado (`BancoPreguntasCSharp`):** Sistema de trivias técnicas de C# con barajado Fisher-Yates e historial de precisión persistido por jugador.
-3. **Empaquetado Autónomo (*Self-Contained*) y Persistencia Segura:** Almacenamiento JSON en `%LocalAppData%\NEXUS\Saves` y generación de instalador profesional mediante `scripts/publish.ps1` e `installer/NEXUS_Setup.iss`.
+El motor visual conserva su arquitectura orientada a eventos con renderizado 2D en GDI+ a ~30 FPS (`BufferedCanvas`), animaciones suaves y módulo didáctico de trivias de C#.
 
 ---
 
 ## 2. Diagrama de Estructura de Clases Actual
 
-```text
-+--------------------+
-|     Program.cs     |
-| [STAThread] Main() |
-+---------+----------+
-          | 1. ShowDialog()         2. Application.Run()
-          ├──────────────────────────┐
-          v                          v
-+--------------------+     +----------------------------------+
-|  FrmSplash : Form  |     |           Form1 : Form           |
-+--------------------+     +----------------------------------+
-| - timerAnim (33ms) |     | - canvasMapa (BufferedCanvas)    |
-| - logoImg          |     | - timerAnimacion (33ms / 30 FPS) |
-| + OnPaint()        |     | - timerIris (1200ms)             |
-+--------------------+     | - bancoPreguntas                 |
-                           | - particulas / textosFlotantes   |
-                           | - directorioSaves (%LocalAppData)|
-                           | + ProcesarMovimiento()           |
-                           | + AbrirModalSoporteVital()       |
-                           +--------+---------------+---------+
-                                    |               |
-                        (Usa)       |               | (Gestiona)
-                                    v               v
-                     +-----------------------+   +-------------------+
-                     | BancoPreguntasCSharp  |   |      Entidad      |
-                     +-----------------------+   +-------------------+
-                     | - colaBarajada (Queue)|   | + VidaMax / Vida  |
-                     | + ObtenerSiguiente()  |   | + DañoBase        |
-                     +-----------+-----------+   +---------+---------+
-                                 |                         ^
-                                 v                         | (Herencia)
-                     +-----------------------+    +--------+--------+
-                     |    PreguntaCSharp     |    |                 |
-                     +-----------------------+ +--+-------+   +-----+----+
-                     | + Categoria           | | Usuario  |   | Enemigo  |
-                     | + Enunciado / Codigo  | +----------+   +----------+
-                     | + Opciones[4]         | | + Nivel  |   | + Nombre |
-                     | + IndiceCorrecto      | | + StatsC#|   | + Escape |
-                     | + Explicacion         | +----------+   +----------+
-                     +-----------------------+
+```mermaid
+classDiagram
+    direction TB
 
-+--------------------+     +--------------------+     +--------------------+
-|      Realidad      |     |       Objeto       |     |    EntidadIris     |
-+--------------------+     +--------------------+     +--------------------+
-| + Estabilidad      |     | + Nombre           |     | + EstadoActual     |
-| + Anomalia         |     | + Contrarresta     |     | + NivelAmenaza     |
-| + MapaLocal[,]     |     | + Usos             |     | + EscanearVuln()   |
-+--------------------+     +--------------------+     +--------------------+
+    class Program {
+        +Main(string[] args)
+    }
 
-+--------------------+     +--------------------+     +--------------------+
-|    DatosPartida    |     |  AtlasRealidades   |     |   BufferedCanvas   |
-+--------------------+     +--------------------+     +--------------------+
-| + Jugador          |     | + Atlas[,] (18x12) |     | + DoubleBuffered   |
-| + RealidadActual   |     | + ActualizarAtlas()|     |   (Herencia Panel) |
-+--------------------+     +--------------------+     +--------------------+
+    class FrmSplash {
+        -Timer timerAnim
+        -Image logoImg
+        +OnPaint(PaintEventArgs e)
+    }
+
+    class Form1 {
+        -BufferedCanvas canvasMapa
+        -Timer timerAnimacion
+        -Timer timerIris
+        -BancoPreguntasCSharp bancoPreguntas
+        -ModoPersistencia modoActualPersistencia
+        -string cadenaConexionSql
+        -List~perfilesCargados~
+        +CambiarModoPersistencia(ModoPersistencia)
+        +GuardarJuego()
+        +RefrescarTablaPerfiles()
+        +EntrarAlSimulador(string)
+    }
+
+    class NexusSqlService {
+        <<Service/DAL>>
+        +string CadenaPorDefecto
+        +ProbarConexion(string, out string) bool
+        +ListarPerfiles(string) List
+        +CargarPartidaCompleta(string, string) DatosPartida
+        +GuardarPartidaCompleta(string, Usuario, Realidad)
+        +EliminarPerfil(string, string) bool
+        +CargarPreguntasDesdeSql(string) List
+    }
+
+    class BancoPreguntasCSharp {
+        -Queue~PreguntaCSharp~ colaBarajada
+        +ObtenerSiguientePregunta() PreguntaCSharp
+        +CargarPreguntasDesdeLista(List)
+    }
+
+    class PreguntaCSharp {
+        +string Categoria
+        +string Dificultad
+        +string Enunciado
+        +string CodigoEjemplo
+        +string[] Opciones
+        +int IndiceCorrecto
+        +string Explicacion
+    }
+
+    class Entidad {
+        +int VidaMax
+        +int Vida
+        +int DañoBase
+    }
+
+    class Usuario {
+        +string Nombre
+        +int Edad
+        +int EnergiaMax
+        +int Energia
+        +int Nivel
+        +int Experiencia
+        +int CapacidadInventario
+        +List~Objeto~ Inventario
+        +List~string~ Observaciones
+        +int BolsaFragmentos
+        +int Restos
+        +int PuntosProficiencia
+        +int UpgradesInv
+        +int UpgradesVida
+        +int UpgradesEnergia
+        +int PreguntasCSharpRespondidas
+        +int PreguntasCSharpAcertadas
+    }
+
+    class Realidad {
+        +string Nombre
+        +int Estabilidad
+        +Anomalia Anomalia
+        +bool Extraida
+        +bool Cartografiada
+        +int CoordenadaX
+        +int CoordenadaY
+        +char[,] MapaLocal
+    }
+
+    class Objeto {
+        +string Nombre
+        +Anomalia Contrarresta
+        +string Descripcion
+        +int Usos
+    }
+
+    Program --> FrmSplash : 1. Inicia Splash
+    Program --> Form1 : 2. Abre Form1
+    Form1 --> NexusSqlService : Persistencia SQL Server (ADO.NET)
+    Form1 --> BancoPreguntasCSharp : Módulo Didáctico C#
+    BancoPreguntasCSharp --> PreguntaCSharp : Gestiona
+    Form1 --> Usuario : Controla Explorador
+    Form1 --> Realidad : Controla Sector Activo
+    Entidad <|-- Usuario : Herencia
+    Usuario --> Objeto : Contiene Mochila
 ```
 
 ---
 
 ## 3. Inventario y Análisis de Componentes
 
-### 3.1. `Program.cs` y `FrmSplash.cs` (Arranque e Identidad Visual)
-- `Program.cs` inicia la configuración DPI de WinForms, ejecuta `FrmSplash` de manera modal (`using (FrmSplash splash = new FrmSplash()) splash.ShowDialog();`) y posteriormente abre `Form1`.
-- `FrmSplash` opera sin bordes (`FormBorderStyle.None`, `DoubleBuffered = true`), cargando `Assets/nexus_logo.png` desde `AppContext.BaseDirectory` con respaldo (*fallback*) dibujado en GDI+ si el archivo no existe. Anima la opacidad (`0.0 -> 1.0`), bordes pulsantes, línea *scanline* y barra de carga durante ~2.5 segundos (omitible con clic o tecla) y libera todos sus recursos en `OnFormClosed`.
+### 3.1. `NexusSqlService.cs` (Capa de Acceso a Datos / DAL)
+Ubicada en el proyecto `src/Interfaz`, encapsula todas las interacciones con Microsoft SQL Server mediante ADO.NET:
+- **`ProbarConexion(string cadena, out string mensaje)`:** Abre una conexión a SQL Server, consulta la versión y valida que la base `NexusDB` responda correctamente.
+- **`ListarPerfiles(string cadena)`:** Invoca el procedimiento almacenado `sp_ListarPerfiles` para obtener el listado rápido de cadetes y sus estados sin bloquear la UI.
+- **`CargarPartidaCompleta(string cadena, string nombre)`:** Ejecuta `sp_CargarPartidaPorNombre` para recuperar en 3 result sets continuos el perfil de `Usuario`, su estado en `Realidad`, los objetos activos en `T_Inventarios` y las pistas de anomalía en `T_Observaciones`.
+- **`GuardarPartidaCompleta(string cadena, Usuario jugador, Realidad realidad)`:** Inicia una transacción explícita (`SqlTransaction` con `IsolationLevel.ReadCommitted`):
+  1. Invoca `sp_GuardarPartidaCabecera` para sincronizar `T_Jugadores` y `T_Partidas_Activas`, capturando el `@JugadorIdOutput`.
+  2. Depura y reinserta atómicamente los ítems en `T_Inventarios`.
+  3. Depura y reinserta las pistas en `T_Observaciones`.
+  4. Ejecuta `transaction.Commit()`. Ante cualquier error invoca `Rollback()` y preserva la integridad del estado.
+- **`EliminarPerfil(string cadena, string nombre)`:** Invoca `sp_EliminarPerfil` aprovechando las llaves foráneas con `ON DELETE CASCADE` para limpiar de raíz toda la información asociada al jugador.
+- **`CargarPreguntasDesdeSql(string cadena)`:** Carga dinámicamente el catálogo de reactivos técnicos desde `T_Preguntas_CSharp`.
 
-### 3.2. `Form1.cs` y `Form1.Designer.cs` (Controlador Principal y Animación)
-- **Temporizadores Desacoplados:**
-  - `timerAnimacion` (`Interval = 33 ms`, ~30 FPS): actualiza la fase sinusoidal de pulsos neón, interpola la posición visual del jugador (`visualPx`, `visualPy`), avanza la línea *scanline* y simula la física/desvanecimiento de `List<Particula>` y `List<TextoFlotante>`.
-  - `timerIris` (`Interval = 1200 ms`): evalúa la vulnerabilidad del sector y dispara alertas visuales o invasiones críticas.
-  - En `Form1_FormClosing`, ambos timers se detienen, se persiste la partida activa y se invoca `Dispose()` sobre imágenes y recursos GDI+.
-- **Identidad Visual y UX:** Carga `Assets/nexus_icon.ico` como ícono de ventana, inserta `Assets/nexus_logo.png` y el pie de créditos en `pnlPerfiles`, aplica efecto *hover* dinámico a botones y ejecuta efectos *flash* + *screen shake* en `AbrirModalCombate`.
-- **Persistencia Segura en Windows:** Cambia el almacenamiento desde `"Saves"` relativo hacia `Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NEXUS", "Saves")`, incluyendo `MigrarSavesLocalesSiExisten()` para copiar automáticamente archivos `.json` previos creados durante desarrollo.
+### 3.2. Controles de Persistencia Dual en `Form1`
+El panel inicial (`pnlPerfiles`) incorpora el grupo **`grpPersistencia`** con:
+- **Selector de Modo:** RadioButtons `rbPersistenciaJson` y `rbPersistenciaSql`.
+  - Al cambiar a SQL Server, verifica la conectividad en vivo. Si tiene éxito, carga las partidas desde `NexusDB`; de lo contrario, advierte al usuario y revierte a JSON.
+- **Botón `⚡ PROBAR CONEXIÓN`:** Ejecuta un test inmediato contra la instancia de SQL Server configurada.
+- **Botón `⚙️ CONFIGURAR CADENA`:** Abre un diálogo interactivo para personalizar la cadena de conexión ADO.NET o restaurar la predeterminada (`Server=.\SQLEXPRESS;Database=NexusDB;Trusted_Connection=True;TrustServerCertificate=True;`).
+- **Botón `🔄 MIGRAR PARTIDAS JSON A SQL SERVER`:** Lee todos los archivos `.json` existentes en `%LocalAppData%\NEXUS\Saves` y los inserta de forma transaccional en SQL Server, facilitando la transición y demostración docente.
+- **Etiquetas de Estado y Telemetría:** Muestran el estado de conexión del motor en tiempo real (`lblEstadoSql`) y la cadena activa (`lblDetalleMotor`).
 
-### 3.3. `BancoPreguntasCSharp.cs` (Módulo Didáctico)
-- Encapsula `PreguntaCSharp` y `BancoPreguntasCSharp` con **28 preguntas** distribuidas en 4 categorías: *Sintaxis y Tipos de Datos*, *Programación Orientada a Objetos*, *Colecciones y LINQ*, y *Excepciones, Memoria y .NET*.
-- Implementa una cola barajada mediante **Fisher-Yates** evitando repeticiones consecutivas entre rondas.
-- Alimenta el modal `AbrirModalSoporteVital`, que gestiona un temporizador regresivo de 25 segundos, bloque de código de ejemplo, validación A–D y despliegue de explicación didáctica.
-
-### 3.4. Clases de Dominio y Serialización JSON
-- `Usuario` agrega `PreguntasCSharpRespondidas` y `PreguntasCSharpAcertadas` (inicializadas en `0` para preservar compatibilidad hacia atrás con archivos `.json` existentes).
-- `Realidad`, `Objeto`, `Enemigo`, `EntidadIris`, `AtlasRealidades` y `DatosPartida` mantienen sus reglas originales, con `InicializarMapaSiNoExiste()` para reconstruir `MapaLocal` (`[JsonIgnore]`) al deserializar.
-
-### 3.5. Pipeline de Compilación e Instalador (`src/scripts` y `src/installer`)
-- `Interfaz.csproj`: declara `<AssemblyName>NEXUS</AssemblyName>`, `<ApplicationIcon>Assets\nexus_icon.ico</ApplicationIcon>`, metadatos de ensamblado y copia automática de `Assets\**\*`.
-- `scripts/publish.ps1`: limpia y ejecuta `dotnet publish -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true`, verificando la existencia de `NEXUS.exe` y de los 3 archivos de `Assets`.
-- `installer/NEXUS_Setup.iss`: script **Inno Setup** que genera `NEXUS_Setup_v1.0.exe`, instala en `{autopf}\NEXUS`, registra accesos directos con ícono oficial y provee desinstalación limpia.
-
----
-
-## 4. Evolución Frente a Limitaciones Anteriores
-
-| Limitación Previa (H3 / Primer Prototipo) | Solución Implementada en NEXUS v1.0.0 |
-| :--- | :--- |
-| **Interfaz bloqueante en consola (`ReadKey`/`Sleep`)** | Arquitectura orientada a eventos en Windows Forms con `KeyDown`, `MouseClick` y `Timer`. |
-| **Mapa estático sin retroalimentación kinestésica** | Motor GDI+ a ~30 FPS con interpolación de movimiento, pulsos neón, *scanline*, partículas, textos flotantes y *screen shake* en combate. |
-| **Minijuegos de recarga genéricos y repetitivos** | Módulo didáctico `BancoPreguntasCSharp` (28 preguntas, Fisher-Yates, 25 s, explicaciones y métricas de precisión). |
-| **Error de permisos (`UnauthorizedAccessException`) en `Program Files`** | Migración del guardado a `%LocalAppData%\NEXUS\Saves` con sanitización de nombres de archivo y respaldo de partidas previas. |
-| **Ejecución limitada a Visual Studio / PC con .NET SDK** | Publicación *self-contained* (`win-x64`) empaquetada en instalador autónomo `NEXUS_Setup_v1.0.exe`. |
+### 3.3. Ciclo de Vida del Guardado (`GuardarJuego()`)
+`GuardarJuego()` evalúa si el perfil activo fue abierto o creado en SQL Server (`rutaGuardadoActual.StartsWith("[SQL]:")` o modo `SqlServer`). En dicho caso, delega el guardado a `NexusSqlService.GuardarPartidaCompleta(...)`. Si está en modo JSON, genera el archivo `.json` en `%LocalAppData%\NEXUS\Saves`.
+Este método se invoca automáticamente en puntos clave:
+- Al crear un explorador nuevo.
+- Al regresar de una expedición al campamento (`IntentarVolverAlCampamento`).
+- Al realizar compras en la tienda o adquirir mejoras de proficiencia.
+- Al responder filtros didácticos de C# en el modal de soporte vital.
+- Al cerrar el videojuego (`FormClosing`), garantizando supervivencia total del progreso.
 
 ---
 
-## 5. Limitaciones Pendientes (Siguiente Iteración)
-1. **Acoplamiento de Clases en `Form1.cs`:** Las entidades de dominio aún residen en el mismo archivo que la vista principal; su extracción hacia bibliotecas `NEXUS.BLL` y `NEXUS.DAL` se documenta en `arquitectura-propuesta.md`.
-2. **Persistencia Local en JSON:** Aunque estable para un jugador local en `%LocalAppData%`, no ofrece integridad referencial ni consultas multiusuario centralizadas; su migración a **SQL Server** se detalla en `modelo-de-datos-propuesto.md`.
+## 4. Estructura de la Base de Datos Relacional (`database/`)
+
+El repositorio incluye una carpeta raíz `database/` con scripts SQL numerados y versionados:
+- **`01_CrearBaseDatos.sql`:** Crea la base de datos `NexusDB` con cotejo `Latin1_General_CI_AS` y banderas ANSI.
+- **`02_CrearTablasYRelaciones.sql`:** Define las 6 tablas relacionales (`T_Jugadores`, `T_Partidas_Activas`, `T_Inventarios`, `T_Observaciones`, `T_Preguntas_CSharp`, `T_Historial_Incursiones`) con restricciones `PRIMARY KEY`, `FOREIGN KEY ON DELETE CASCADE`, `CHECK` y `UNIQUE`.
+- **`03_ProcedimientosAlmacenados.sql`:** Implementa los procedimientos almacenados de guardado atómico, carga multiconjunto, listado y eliminación en cascada.
+- **`04_CargaInicialPreguntas.sql`:** Inserta las 28 preguntas pedagógicas de C# verificadas.
+- **`05_ScriptCompleto_NexusDB.sql`:** Script monolítico unificado para despliegue rápido.
+- **`ejecutar_scripts.ps1`:** Script PowerShell para ejecutar en secuencia todo el despliegue con un solo comando.
